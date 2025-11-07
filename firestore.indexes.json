@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "dailyFoods",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublished", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

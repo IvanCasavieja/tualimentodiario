@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "138827358911",
+    "project_id": "tualimentodiario-dff6e",
+    "storage_bucket": "tualimentodiario-dff6e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:138827358911:android:e7f855f07b5d377d975c0a",
+        "android_client_info": {
+          "package_name": "com.example.tu_alimento_diario"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "138827358911-t0ocd8i6ibncsrmenmu6f8a57fau73i6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tu_alimento_diario",
+            "certificate_hash": "a1a1a6db888f0c547eb21acc602862e898608a9a"
+          }
+        },
+        {
+          "client_id": "138827358911-5sqm3i8r4ac5o3fh4mpo7o21p9lcairt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDVEwg-htiCt4vEFQPkVhQnKs-BvVnvRI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "138827358911-5sqm3i8r4ac5o3fh4mpo7o21p9lcairt.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "138827358911-1jc48p94fujb59gdtm9146rd9mkjl04v.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.tuAlimentoDiario"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

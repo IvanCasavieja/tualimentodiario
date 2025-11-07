@@ -1,0 +1,29 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "tualimentodiario-dff6e",
+          "appId": "1:138827358911:android:e7f855f07b5d377d975c0a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "tualimentodiario-dff6e",
+          "configurations": {
+            "android": "1:138827358911:android:e7f855f07b5d377d975c0a",
+            "ios": "1:138827358911:ios:1283081078a3f761975c0a",
+            "macos": "1:138827358911:ios:1283081078a3f761975c0a",
+            "web": "1:138827358911:web:36fe13429dbc249a975c0a",
+            "windows": "1:138827358911:web:9177b1b33f19bf91975c0a"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
