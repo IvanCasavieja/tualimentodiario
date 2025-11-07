@@ -7,7 +7,14 @@ enum AppLang { es, en, pt, it }
 /// Proveedor simple del idioma actual
 final languageProvider = StateProvider<AppLang>((ref) => AppLang.es);
 
-/// Helper para cargar/guardar preferencia de idioma en SharedPreferences
+/// Navegación bottom (0: Inicio, 1: Archivo, 2: Favoritos, 3: Perfil)
+final bottomTabIndexProvider = StateProvider<int>((ref) => 0);
+
+/// Cuando el usuario toca una tarjeta en Inicio, guardamos el ID para que
+/// Archivo abra el detalle de ese documento.
+final selectedFoodIdProvider = StateProvider<String?>((ref) => null);
+
+/// Preferencias locales del idioma
 class LanguagePrefs {
   static const _key = 'lang';
 
@@ -44,7 +51,6 @@ class LanguagePrefs {
       case 'it':
         return AppLang.it;
       case 'es':
-        return AppLang.es;
       default:
         return AppLang.es;
     }

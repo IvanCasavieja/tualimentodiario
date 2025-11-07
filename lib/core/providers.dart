@@ -2,13 +2,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../features/auth/auth_service.dart';
 import 'firestore_repository.dart';
 
-/// Auth simple (anon)
-final authProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
-});
+/// ---------------------------------------------------------------------------
+/// ✅ AUTH STATE (anónimo o logueado)
+/// ---------------------------------------------------------------------------
+final authStateProvider = StreamProvider<User?>(
+  (ref) => FirebaseAuth.instance.authStateChanges(),
+);
 
+// Alias opcional para compatibilidad con código viejo
+@Deprecated('Usá authStateProvider')
+final authProvider = authStateProvider;
+
+/// Servicio de autenticación (email, google, guest, logout)
+final authServiceProvider = Provider<AuthService>((ref) => AuthService());
+
+/// 🔹 Acción rápida: entrar en modo invitado (anon)
 final signInAnonProvider = Provider<Future<User?> Function()>((ref) {
   return () async {
     final cred = await FirebaseAuth.instance.signInAnonymously();
@@ -16,13 +27,17 @@ final signInAnonProvider = Provider<Future<User?> Function()>((ref) {
   };
 });
 
-/// Home stream
+/// ---------------------------------------------------------------------------
+/// ✅ HOME STREAM (inicio)
+/// ---------------------------------------------------------------------------
 final homeStreamProvider =
     StreamProvider<QuerySnapshot<Map<String, dynamic>>>((ref) {
   return FS.homeQuery().snapshots();
 });
 
-/// Favoritos IDs del usuario actual
+/// ---------------------------------------------------------------------------
+/// ✅ FAVORITOS DEL USUARIO
+/// ---------------------------------------------------------------------------
 final favoritesIdsProvider =
     StreamProvider.family<List<String>, String>((ref, uid) {
   return FS
