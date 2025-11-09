@@ -14,18 +14,17 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // Sign-in anónimo para poder usar favoritos y lecturas con reglas
+  // Sign-in anónimo
   if (FirebaseAuth.instance.currentUser == null) {
     await FirebaseAuth.instance.signInAnonymously();
   }
 
-  // Idioma guardado en SharedPreferences (por defecto 'es')
+  // Idioma guardado
   final savedLang = await LanguagePrefs.load();
 
   runApp(
     ProviderScope(
       overrides: [
-        // Sobrescribimos el valor inicial del StateProvider
         languageProvider.overrideWith((ref) => savedLang),
       ],
       child: const App(),
@@ -76,9 +75,6 @@ class NavScaffold extends ConsumerStatefulWidget {
 }
 
 class _NavScaffoldState extends ConsumerState<NavScaffold> {
-  // Suscripción para escuchar el “tocar tarjeta en Inicio”
-  ProviderSubscription<String?>? _sub;
-
   final pages = const [
     HomeView(),
     ArchiveView(),
@@ -87,53 +83,36 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    // Usamos listenManual en initState (apto fuera de build)
-    _sub = ref.listenManual<String?>(
-      selectedFoodIdProvider,
-      (prev, next) {
-        if (next != null) {
-          // cambiate a Archivo
-          ref.read(bottomTabIndexProvider.notifier).state = 1;
-          // (ArchiveView abrirá el detalle al detectar selectedFoodId)
-        }
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _sub?.close();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final idx = ref.watch(bottomTabIndexProvider);
     return Scaffold(
-      body: pages[idx],
+      // ✅ Mantiene montadas todas las pestañas
+      body: IndexedStack(index: idx, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: idx,
         onDestinationSelected: (i) =>
             ref.read(bottomTabIndexProvider.notifier).state = i,
         destinations: const [
           NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Inicio'),
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Inicio',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.folder_copy_outlined),
-              selectedIcon: Icon(Icons.folder),
-              label: 'Archivo'),
+            icon: Icon(Icons.folder_copy_outlined),
+            selectedIcon: Icon(Icons.folder),
+            label: 'Archivo',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.favorite_border),
-              selectedIcon: Icon(Icons.favorite),
-              label: 'Favoritos'),
+            icon: Icon(Icons.favorite_border),
+            selectedIcon: Icon(Icons.favorite),
+            label: 'Favoritos',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Perfil'),
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
         ],
       ),
     );

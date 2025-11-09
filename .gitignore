@@ -46,3 +46,5 @@ app.*.map.json
 
 scripts/
 lib/firebase_options.dart
+
+android/key.properties

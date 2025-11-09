@@ -26,30 +26,27 @@ class FS {
       .orderBy('date', descending: false)
       .limit(10);
 
-  // Favoritos
+  // -------------------- Favoritos --------------------
+
   static CollectionReference<Map<String, dynamic>> favCol(String uid) =>
       db.collection('users').doc(uid).collection('favorites');
 
   static DocumentReference<Map<String, dynamic>> foodRef(String id) =>
       db.collection('dailyFoods').doc(id);
 
+  /// Marca/Desmarca favorito SOLO en /users/{uid}/favorites/{foodId}
+  /// (No toca dailyFoods.* para evitar PERMISSION_DENIED con reglas de admin)
   static Future<void> toggleFavorite({
     required String uid,
     required String foodId,
     required bool add,
   }) async {
     final favRef = favCol(uid).doc(foodId);
-    final food = foodRef(foodId);
 
-    await db.runTransaction((tx) async {
-      final favDoc = await tx.get(favRef);
-      if (add && !favDoc.exists) {
-        tx.set(favRef, {'createdAt': FieldValue.serverTimestamp()});
-        tx.update(food, {'stats.favoritesCount': FieldValue.increment(1)});
-      } else if (!add && favDoc.exists) {
-        tx.delete(favRef);
-        tx.update(food, {'stats.favoritesCount': FieldValue.increment(-1)});
-      }
-    });
+    if (add) {
+      await favRef.set({'createdAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+    } else {
+      await favRef.delete();
+    }
   }
 }

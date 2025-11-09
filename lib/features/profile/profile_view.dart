@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../core/app_state.dart'; // languageProvider
-import '../../core/providers.dart';  // <-- authServiceProvider, authStateProvider
+import '../../core/providers.dart';  // authServiceProvider, authStateProvider
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
@@ -22,18 +23,15 @@ class ProfileView extends ConsumerWidget {
         body: Center(child: Text('Error: $e')),
       ),
       data: (user) {
-        // Invitado (anónimo o null) => mostrar opciones de login
         if (user == null || user.isAnonymous) {
           return _GuestProfile(lang: lang);
         }
-        // Logueado => mostrar perfil
         return _UserProfile(user: user, lang: lang);
       },
     );
   }
 }
 
-/// -------------------- VISTA INVITADO --------------------
 class _GuestProfile extends ConsumerWidget {
   const _GuestProfile({required this.lang});
   final AppLang lang;
@@ -59,8 +57,6 @@ class _GuestProfile extends ConsumerWidget {
             child: Text('Invitado', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 24),
-
-          // GOOGLE
           FilledButton.icon(
             onPressed: () async {
               try {
@@ -81,19 +77,13 @@ class _GuestProfile extends ConsumerWidget {
             icon: const Icon(Icons.g_mobiledata, size: 28),
             label: const Text('Continuar con Google'),
           ),
-
           const SizedBox(height: 12),
-
-          // EMAIL / PASSWORD (login)
           OutlinedButton.icon(
             onPressed: () => _showEmailDialog(context, ref, isRegister: false),
             icon: const Icon(Icons.login),
             label: const Text('Iniciar sesión con email'),
           ),
-
           const SizedBox(height: 8),
-
-          // EMAIL / PASSWORD (register)
           TextButton(
             onPressed: () => _showEmailDialog(context, ref, isRegister: true),
             child: const Text('Crear cuenta con email'),
@@ -154,15 +144,45 @@ class _GuestProfile extends ConsumerWidget {
   }
 }
 
-/// -------------------- VISTA USUARIO LOGUEADO --------------------
-class _UserProfile extends ConsumerWidget {
+class _UserProfile extends ConsumerStatefulWidget {
   const _UserProfile({required this.user, required this.lang});
   final User user;
   final AppLang lang;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_UserProfile> createState() => _UserProfileState();
+}
+
+class _UserProfileState extends ConsumerState<_UserProfile> {
+  static final Set<String> _ensured = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Creamos/actualizamos doc mínimo en /users/{uid} sin depender de Storage ni foto.
+    if (!_ensured.contains(widget.user.uid)) {
+      _ensured.add(widget.user.uid);
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final u = widget.user;
+        await FirebaseFirestore.instance.doc('users/${u.uid}').set({
+          'displayName': u.displayName ?? '',
+          'email': u.email ?? '',
+          'providerIds': u.providerData.map((p) => p.providerId).toList(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(), // merge no lo pisa si ya existe
+        }, SetOptions(merge: true));
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final auth = ref.read(authServiceProvider);
+    // Avatar SIEMPRE local por inicial (no usamos photoURL para evitar dependencias/costos)
+    final initial = (widget.user.displayName?.isNotEmpty == true
+            ? widget.user.displayName!.trim()[0]
+            : (widget.user.email?.isNotEmpty == true ? widget.user.email![0] : 'U'))
+        .toUpperCase();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Perfil')),
@@ -173,35 +193,34 @@ class _UserProfile extends ConsumerWidget {
           Center(
             child: CircleAvatar(
               radius: 36,
-              backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
-              child: user.photoURL == null
-                  ? Icon(Icons.person, size: 36, color: Colors.grey[700])
-                  : null,
+              child: Text(
+                initial,
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+              ),
             ),
           ),
           const SizedBox(height: 12),
           Center(
             child: Text(
-              user.displayName?.isNotEmpty == true ? user.displayName! : (user.email ?? 'Usuario'),
+              widget.user.displayName?.isNotEmpty == true ? widget.user.displayName! : (widget.user.email ?? 'Usuario'),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(height: 6),
           Center(
-            child: Text('UID: ${user.uid}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            child: Text('UID: ${widget.user.uid}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ),
           const SizedBox(height: 24),
 
-          // Selector de idioma (opcional; mantiene lo que ya tenías)
           const Text('Idioma', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
-            children: [
-              _LangChip(label: 'Español', value: AppLang.es, selected: lang == AppLang.es),
-              _LangChip(label: 'English', value: AppLang.en, selected: lang == AppLang.en),
-              _LangChip(label: 'Português', value: AppLang.pt, selected: lang == AppLang.pt),
-              _LangChip(label: 'Italiano', value: AppLang.it, selected: lang == AppLang.it),
+            children: const [
+              _LangChip(label: 'Español', value: AppLang.es),
+              _LangChip(label: 'English', value: AppLang.en),
+              _LangChip(label: 'Português', value: AppLang.pt),
+              _LangChip(label: 'Italiano', value: AppLang.it),
             ],
           ),
 
@@ -210,7 +229,6 @@ class _UserProfile extends ConsumerWidget {
           FilledButton.tonal(
             onPressed: () async {
               await auth.signOut();
-              // Volvemos al modo invitado
             },
             child: const Text('Cerrar sesión'),
           ),
@@ -221,13 +239,13 @@ class _UserProfile extends ConsumerWidget {
 }
 
 class _LangChip extends ConsumerWidget {
-  const _LangChip({required this.label, required this.value, required this.selected});
+  const _LangChip({required this.label, required this.value});
   final String label;
   final AppLang value;
-  final bool selected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(languageProvider) == value;
     return FilterChip(
       label: Text(label),
       selected: selected,

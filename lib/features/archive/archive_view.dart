@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/app_state.dart';                       // languageProvider
+import '../../core/app_state.dart';                       // languageProvider, selectedFoodIdProvider
 import '../../core/models/daily_food.dart';               // DailyFood.fromDoc
 import '../../core/ui_utils.dart';                        // ellipsize
 import '../common/food_detail_dialog.dart';               // FoodDetailDialog
+import '../common/favorite_heart.dart';                   // ❤️
+import '../common/moods.dart';                            // moodsFilterProvider, moodBySlug
 
-/// Vista de Archivo con paginación por páginas y filtro de fechas.
-/// Si [initialFoodId] viene, intenta abrir ese alimento tras la primera carga.
 class ArchiveView extends ConsumerStatefulWidget {
   final String? initialFoodId;
   const ArchiveView({super.key, this.initialFoodId});
@@ -19,13 +19,16 @@ class ArchiveView extends ConsumerStatefulWidget {
 }
 
 class _ArchiveViewState extends ConsumerState<ArchiveView> {
+  // --- Estilo compartido con Home ---
+  static const _primary = Color(0xFF6C4DF5);
+  static const _accent  = Color(0xFF48C1F1);
+
   // ---- Config
   static const int _pageSize = 10;
   static const int _pagerWindow = 5;
 
-  // ---- Estado de datos
+  // ---- Query base
   Query<Map<String, dynamic>> _baseQuery() {
-    // Orden estable: date DESC, luego __name__ DESC (para cursor)
     return FirebaseFirestore.instance
         .collection('dailyFoods')
         .where('isPublished', isEqualTo: true)
@@ -33,13 +36,12 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         .orderBy(FieldPath.documentId, descending: true);
   }
 
-  // Contadores / paginación
+  // ---- Estado de paginación
   int _totalCount = 0;
   int _totalPages = 0;
-  int _currentPage = 1; // 1-based
+  int _currentPage = 1;
 
-  // Para paginar por número de página guardamos el último doc de cada página ya visitada.
-  // _pageCursors[i] = último doc de la página i+1 (0-based index => página 1 = index 0)
+  // Último doc de cada página visitada
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _pageCursors = [];
 
   // Items visibles (página actual)
@@ -48,24 +50,52 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   // UI / carga
   bool _loading = false;
   String? _error;
+  String? _rawError;
 
-  // Filtros por fecha (string 'yyyy-MM-dd', porque en tu base date es String)
+  // Filtros por fecha (string 'yyyy-MM-dd')
   final _fromCtrl = TextEditingController();
   final _toCtrl = TextEditingController();
 
-  // Lang
+  // Idioma
   String get _langCode => _toCode(ref.read(languageProvider));
+
+  // Listeners
+  ProviderSubscription<String?>? _selSub;           // abrir detalle por ID
+  ProviderSubscription<Set<String>>? _moodsSub;     // recargar al cambiar chips
 
   @override
   void initState() {
     super.initState();
-    _fetchCount().then((_) => _loadPage(1)).then((_) async {
-      // Si nos pasaron un ID para abrir en detalle, probamos abrirlo si está en la primera página.
-      if (widget.initialFoodId != null) {
-        final idx = _items.indexWhere((d) => d.id == widget.initialFoodId);
-        if (idx >= 0) {
-          _openDetail(_items[idx]);
+
+    // Abrir detalle por ID (desde Home)
+    _selSub = ref.listenManual<String?>(
+      selectedFoodIdProvider,
+      (prev, next) {
+        if (next != null) {
+          _openById(next);
+          ref.read(selectedFoodIdProvider.notifier).state = null;
         }
+      },
+    );
+
+    // Cambios en chips de ánimo -> recalcular lista (página 1)
+    _moodsSub = ref.listenManual<Set<String>>(
+      moodsFilterProvider,
+      (prev, next) => _applyFilter(),
+    );
+
+    // Si ya había un valor pendiente para abrir, procesarlo
+    final pending = ref.read(selectedFoodIdProvider);
+    if (pending != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _openById(pending);
+        ref.read(selectedFoodIdProvider.notifier).state = null;
+      });
+    }
+
+    _fetchCount().then((_) => _loadPage(1)).then((_) async {
+      if (widget.initialFoodId != null) {
+        await _openById(widget.initialFoodId!);
       }
     });
   }
@@ -74,6 +104,8 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   void dispose() {
     _fromCtrl.dispose();
     _toCtrl.dispose();
+    _selSub?.close();
+    _moodsSub?.close();
     super.dispose();
   }
 
@@ -81,32 +113,36 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
   Query<Map<String, dynamic>> _filteredQuery() {
     var q = _baseQuery();
+
+    // Fechas
     final f = _fromCtrl.text.trim();
     final t = _toCtrl.text.trim();
-    // Como 'date' es String con formato yyyy-MM-dd, comparar por rango funciona lexicográficamente.
-    if (f.isNotEmpty) {
-      q = q.where('date', isGreaterThanOrEqualTo: f);
+    if (f.isNotEmpty) q = q.where('date', isGreaterThanOrEqualTo: f);
+    if (t.isNotEmpty) q = q.where('date', isLessThanOrEqualTo: t);
+
+    // Ánimo (selección única)
+    final moods = ref.read(moodsFilterProvider);
+    if (moods.isNotEmpty) {
+      q = q.where('moods', arrayContains: moods.first);
     }
-    if (t.isNotEmpty) {
-      q = q.where('date', isLessThanOrEqualTo: t);
-    }
+
     return q;
   }
 
   Future<void> _fetchCount() async {
-    // Usamos "aggregation count" para saber total con los filtros vigentes.
     try {
+      _setError(null, null);
       final snap = await _filteredQuery().count().get();
-      _totalCount = snap.count ?? 0; // SDKs viejos devuelven null-safe; usamos 0 por si acaso
+      _totalCount = snap.count ?? 0;
       _totalPages = _totalCount == 0 ? 1 : ((_totalCount + _pageSize - 1) ~/ _pageSize);
       if (!mounted) return;
       setState(() {});
     } catch (e) {
+      _handleFirestoreError(e, context: 'contando documentos');
       if (!mounted) return;
       setState(() {
         _totalCount = 0;
         _totalPages = 1;
-        _error = 'Error contando documentos: $e';
       });
     }
   }
@@ -115,17 +151,15 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     if (_loading) return;
     setState(() {
       _loading = true;
-      _error = null;
       _items.clear();
+      _setError(null, null);
     });
 
     try {
-      // Aseguramos límites
       if (targetPage < 1) targetPage = 1;
       if (targetPage > _totalPages) targetPage = _totalPages;
 
-      // Si necesitamos llegar a una página cuya posición aún no conocemos,
-      // vamos construyendo cursores secuencialmente (startAfterDocument).
+      // Construir cursores hasta la página target (si no los tenemos)
       while (_pageCursors.length < targetPage - 1) {
         final prevIdx = _pageCursors.length; // cursor de la página prevIdx+1
         final prevCursor = prevIdx == 0 ? null : _pageCursors[prevIdx - 1];
@@ -136,50 +170,85 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         _pageCursors.add(snap.docs.last);
       }
 
-      // Ahora obtenemos la página deseada
+      // Obtener la página deseada
       final prevCursor = targetPage == 1 ? null : _pageCursors[targetPage - 2];
       var q = _filteredQuery().limit(_pageSize);
       if (prevCursor != null) q = q.startAfterDocument(prevCursor);
       final pageSnap = await q.get();
 
-      _items.clear();
-      _items.addAll(pageSnap.docs);
+      _items
+        ..clear()
+        ..addAll(pageSnap.docs);
       _currentPage = targetPage;
 
-      // Guardamos el cursor (último doc) de esta página si aún no lo tenemos
+      // Guardar cursor de esta página si no lo teníamos
       if (_pageCursors.length < targetPage) {
         if (pageSnap.docs.isNotEmpty) {
           _pageCursors.add(pageSnap.docs.last);
-        } else {
-          _pageCursors.add(prevCursor!); // fallback
+        } else if (prevCursor != null) {
+          _pageCursors.add(prevCursor);
         }
       }
     } catch (e) {
-      _error = 'Error cargando página: $e';
+      _handleFirestoreError(e, context: 'cargando página');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _applyFilter() async {
-    // Reiniciamos estado de paginación y recargamos
+  Future<void> _applyFilter() async {
     _pageCursors.clear();
     await _fetchCount();
     await _loadPage(1);
   }
 
-  // -------------------------- UI helpers --------------------------
+  // -------- abrir por ID (recorre páginas si hace falta) --------
+  Future<void> _openById(String id) async {
+    // ¿Está en la página actual?
+    final local = _items.indexWhere((d) => d.id == id);
+    if (local >= 0) {
+      _openDetail(_items[local]);
+      return;
+    }
+
+    final start = _currentPage;
+
+    // Hacia adelante
+    for (int p = start; p <= _totalPages; p++) {
+      if (p != _currentPage) await _loadPage(p);
+      final idx = _items.indexWhere((d) => d.id == id);
+      if (idx >= 0) {
+        _openDetail(_items[idx]);
+        return;
+      }
+    }
+    // Hacia atrás
+    if (start != 1) {
+      for (int p = 1; p < start; p++) {
+        await _loadPage(p);
+        final idx = _items.indexWhere((d) => d.id == id);
+        if (idx >= 0) {
+          _openDetail(_items[idx]);
+          return;
+        }
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se encontró el alimento con los filtros actuales.')),
+      );
+    }
+  }
+
+  // -------------------------- Helpers --------------------------
 
   static String _toCode(AppLang l) {
     switch (l) {
-      case AppLang.es:
-        return 'es';
-      case AppLang.en:
-        return 'en';
-      case AppLang.pt:
-        return 'pt';
-      case AppLang.it:
-        return 'it';
+      case AppLang.es: return 'es';
+      case AppLang.en: return 'en';
+      case AppLang.pt: return 'pt';
+      case AppLang.it: return 'it';
     }
   }
 
@@ -201,12 +270,50 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   }
 
   String _formatDate(String raw) {
-    // Base tiene 'yyyy-MM-dd' (string). Mostramos 'dd/MM/yyyy'.
     try {
       final dt = DateFormat('yyyy-MM-dd').parseStrict(raw);
       return DateFormat('dd/MM/yyyy').format(dt);
     } catch (_) {
       return raw;
+    }
+  }
+
+  DateTime? _tryParseYMD(String s) {
+    try {
+      return DateFormat('yyyy-MM-dd').parseStrict(s);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _pickDateFor(TextEditingController ctrl) async {
+    // Intentar usar la fecha existente, sino hoy.
+    final initial = _tryParseYMD(ctrl.text) ?? DateTime.now();
+    final first = DateTime(2000, 1, 1);
+    final last = DateTime(2100, 12, 31);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(first) || initial.isAfter(last) ? DateTime.now() : initial,
+      firstDate: first,
+      lastDate: last,
+      helpText: 'Seleccioná la fecha',
+      cancelText: 'Cancelar',
+      confirmText: 'Aceptar',
+      useRootNavigator: true,
+      builder: (ctx, child) {
+        // Si querés forzar locale según app:
+        return Localizations.override(
+          context: ctx,
+          locale: Locale(_langCode),
+          child: child,
+        );
+      },
+    );
+
+    if (picked != null) {
+      ctrl.text = DateFormat('yyyy-MM-dd').format(picked);
+      setState(() {}); // refrescar íconos de limpiar, etc.
     }
   }
 
@@ -219,12 +326,42 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     );
   }
 
+  void _setError(String? userMessage, String? raw) {
+    _error = userMessage;
+    _rawError = raw;
+  }
+
+  void _handleFirestoreError(Object e, {required String context}) {
+    final msg = e.toString();
+    // Friendly mapping para el caso del índice en construcción
+    if (msg.contains('FAILED_PRECONDITION') &&
+        (msg.contains('requires an index') || msg.contains('index is currently building'))) {
+      _setError(
+        'El filtro por estados de ánimo necesita un índice de Firestore y '
+        'ese índice todavía se está construyendo. Cuando quede listo, '
+        'los resultados aparecerán ordenados por fecha (10 por página).',
+        msg,
+      );
+    } else {
+      _setError('Error $context: $e', msg);
+    }
+  }
+
+  void _clearMood() {
+    ref.read(moodsFilterProvider.notifier).state = {};
+    _applyFilter(); // quedarse en Archivo mostrando todo, página 1
+  }
+
   // ------------------------------ BUILD ------------------------------
 
   @override
   Widget build(BuildContext context) {
     // Rebuild si cambia idioma
     ref.watch(languageProvider);
+    // También rebuild si cambian los chips (para mostrar chip activo)
+    final selected = ref.watch(moodsFilterProvider);
+    final activeSlug = selected.isEmpty ? null : selected.first;
+    final activeMood = activeSlug == null ? null : moodBySlug(activeSlug);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Archivo')),
@@ -233,30 +370,65 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
           // Filtros
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _fromCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Desde (yyyy-MM-dd)',
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DateField(
+                        controller: _fromCtrl,
+                        label: 'Desde (yyyy-MM-dd)',
+                        onPick: () => _pickDateFor(_fromCtrl),
+                        onClear: () {
+                          _fromCtrl.clear();
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _DateField(
+                        controller: _toCtrl,
+                        label: 'Hasta (yyyy-MM-dd)',
+                        onPick: () => _pickDateFor(_toCtrl),
+                        onClear: () {
+                          _toCtrl.clear();
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: _loading ? null : _applyFilter,
+                      icon: const Icon(Icons.filter_alt),
+                      label: const Text('Filtrar'),
+                    ),
+                  ],
+                ),
+
+                // Chip activo con X para quitar (sin volver a Home)
+                if (activeMood != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: InputChip(
+                      avatar: Icon(activeMood.icon, size: 16, color: activeMood.color),
+                      label: Text(
+                        activeMood.label,
+                        style: TextStyle(
+                          color: activeMood.color.withOpacity(.95),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      onDeleted: _clearMood,
+                      deleteIconColor: activeMood.color,
+                      backgroundColor: activeMood.color.withOpacity(.12),
+                      shape: StadiumBorder(
+                        side: BorderSide(color: activeMood.color.withOpacity(.35)),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _toCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Hasta (yyyy-MM-dd)',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _loading ? null : _applyFilter,
-                  child: const Text('Filtrar'),
-                ),
+                ],
               ],
             ),
           ),
@@ -266,11 +438,11 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(child: Text(_error!))
+                    ? _FriendlyError(message: _error!, raw: _rawError, onClearMood: _clearMood)
                     : _items.isEmpty
                         ? const Center(child: Text('No hay resultados'))
                         : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                             itemCount: _items.length + 1,
                             itemBuilder: (ctx, i) {
                               if (i == _items.length) {
@@ -296,40 +468,88 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                               final description = (t['description'] as String?)?.trim() ?? '';
                               final dateStr = (data['date'] as String?) ?? '';
 
-                              return Card(
+                              // ====== TARJETITA = misma estética que Home ======
+                              return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [Colors.white, Colors.white.withOpacity(.965)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black12.withOpacity(.06),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
                                 child: InkWell(
+                                  borderRadius: BorderRadius.circular(20),
                                   onTap: () => _openDetail(doc),
                                   child: Padding(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Column(
+                                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                                    child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          verse,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
+                                        // Listón lateral
+                                        Container(
+                                          width: 6,
+                                          height: 72,
+                                          decoration: BoxDecoration(
+                                            color: _primary,
+                                            borderRadius: BorderRadius.circular(8),
                                           ),
                                         ),
-                                        const SizedBox(height: 6),
-                                        Text(ellipsize(description, 160)),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              _formatDate(dateStr),
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey,
+                                        const SizedBox(width: 12),
+                                        // Contenido
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                verse,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                               ),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.open_in_new),
-                                              onPressed: () => _openDetail(doc),
-                                            ),
-                                          ],
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                ellipsize(description, 130),
+                                                style: TextStyle(
+                                                  color: Colors.black.withOpacity(.75),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  _DateChip(
+                                                    text: _formatDate(dateStr),
+                                                    icon: Icons.event,
+                                                    color: _accent,
+                                                  ),
+                                                  Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      FavoriteHeart(
+                                                          foodId: doc.id, iconSize: 22),
+                                                      const SizedBox(width: 4),
+                                                      IconButton(
+                                                        icon: const Icon(Icons.open_in_new),
+                                                        tooltip: 'Abrir',
+                                                        onPressed: () => _openDetail(doc),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -342,6 +562,131 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         ],
       ),
     );
+  }
+}
+
+// ===================== UI auxiliares =====================
+
+class _FriendlyError extends StatelessWidget {
+  final String message;
+  final String? raw;
+  final VoidCallback onClearMood;
+  const _FriendlyError({required this.message, this.raw, required this.onClearMood});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(message),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: onClearMood,
+            icon: const Icon(Icons.clear_all),
+            label: const Text('Quitar filtro'),
+          ),
+          if (raw != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Text(
+                raw!,
+                style: const TextStyle(fontSize: 12, color: Colors.black87),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  const _DateField({
+    required this.controller,
+    required this.label,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasValue = controller.text.trim().isNotEmpty;
+
+    return TextField(
+      controller: controller,
+      readOnly: true, // abre el datepicker en vez del teclado
+      decoration: InputDecoration(
+        labelText: label,
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasValue)
+              IconButton(
+                tooltip: 'Limpiar',
+                icon: const Icon(Icons.clear),
+                onPressed: onClear,
+              ),
+            IconButton(
+              tooltip: 'Seleccionar fecha',
+              icon: const Icon(Icons.calendar_today),
+              onPressed: onPick,
+            ),
+          ],
+        ),
+      ),
+      onTap: onPick,
+    );
+  }
+}
+
+class _DateChip extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  final Color color;
+  const _DateChip({required this.text, required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.12),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color.withOpacity(.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color.withOpacity(.9)),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: _darken(color),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _darken(Color c, [double a = .18]) {
+    final h = HSLColor.fromColor(c);
+    return h.withLightness((h.lightness - a).clamp(0.0, 1.0)).toColor();
   }
 }
 
