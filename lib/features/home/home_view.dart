@@ -104,7 +104,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
               }
               final docs = snap.data?.docs ?? [];
               if (docs.isEmpty) {
-                return const Center(child: Text('No hay alimentos aún.'));
+                return const Center(child: Text('No hay alimentos aÃºn.'));
               }
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -131,9 +131,9 @@ class _HomeViewState extends ConsumerState<HomeView> {
                       primary: langCode,
                       fallback: 'es',
                     );
-                    final verse = (tr['verse'] as String?)?.trim() ?? '—';
+                    final verse = (tr['verse'] as String?)?.trim() ?? 'â€”';
                     final description =
-                        (tr['description'] as String?)?.trim() ?? '—';
+                        (tr['description'] as String?)?.trim() ?? 'â€”';
                     return _FoodCard(
                       id: id,
                       verse: verse,
@@ -234,7 +234,7 @@ class _HeroHeader extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient:
-            LinearGradient(colors: [primary.withOpacity(.15), accent.withOpacity(.15)]),
+            LinearGradient(colors: [primary.withValues(alpha: .15), accent.withValues(alpha: .15)]),
         borderRadius: BorderRadius.circular(20),
       ),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
@@ -251,7 +251,7 @@ class _HeroHeader extends StatelessWidget {
           _PillIconButton(icon: Icons.casino, label: randomLabel, fg: primary, onTap: onRandom),
         ]),
         const SizedBox(height: 10),
-        Text(subtitle, style: TextStyle(color: Colors.black.withOpacity(.7), height: 1.25)),
+        Text(subtitle, style: TextStyle(color: Colors.black.withValues(alpha: .7), height: 1.25)),
         const SizedBox(height: 12),
         chips,
       ]),
@@ -294,7 +294,6 @@ class _FoodCard extends StatelessWidget {
   final Color primary, accent;
 
   const _FoodCard({
-    super.key,
     required this.id,
     required this.verse,
     required this.description,
@@ -304,7 +303,7 @@ class _FoodCard extends StatelessWidget {
     required this.onOpen,
   });
 
-  String _short(String t) => t.length > 130 ? '${t.substring(0, 130)}…' : t;
+  String _short(String t) => t.length > 130 ? '${t.substring(0, 130)}â€¦' : t;
 
   @override
   Widget build(BuildContext context) {
@@ -313,12 +312,12 @@ class _FoodCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-            colors: [Colors.white, Colors.white.withOpacity(.96)],
+            colors: [Colors.white, Colors.white.withValues(alpha: .96)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black12.withOpacity(.06), blurRadius: 14, offset: const Offset(0, 6))
+          BoxShadow(color: Colors.black12.withValues(alpha: .06), blurRadius: 14, offset: const Offset(0, 6))
         ],
       ),
       child: InkWell(
@@ -333,7 +332,7 @@ class _FoodCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(verse, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
-                Text(_short(description), style: TextStyle(color: Colors.black.withOpacity(.75))),
+                Text(_short(description), style: TextStyle(color: Colors.black.withValues(alpha: .75))),
                 const SizedBox(height: 10),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   _DateChip(text: formattedDate, icon: Icons.event, color: accent),
@@ -363,12 +362,12 @@ class _DateChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(.12),
+        color: color.withValues(alpha: .12),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: color.withOpacity(.25)),
+        border: Border.all(color: color.withValues(alpha: .25)),
       ),
       child: Row(children: [
-        Icon(icon, size: 14, color: color.withOpacity(.9)),
+        Icon(icon, size: 14, color: color.withValues(alpha: .9)),
         const SizedBox(width: 6),
         Text(text,
             style: TextStyle(fontSize: 12, color: _darken(color), fontWeight: FontWeight.w600)),
@@ -381,3 +380,4 @@ class _DateChip extends StatelessWidget {
     return h.withLightness((h.lightness - a).clamp(0.0, 1.0)).toColor();
   }
 }
+

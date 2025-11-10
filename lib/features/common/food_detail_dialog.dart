@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -124,7 +124,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                 children: [
                   Expanded(
                     child: Text(
-                      verse.isEmpty ? '—' : verse,
+                      verse.isEmpty ? 'â€”' : verse,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -232,12 +232,10 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  Theme.of(context)
-                                      .dialogBackgroundColor
-                                      .withOpacity(0.0),
-                                  Theme.of(context)
-                                      .dialogBackgroundColor
-                                      .withOpacity(0.9),
+                                  (Theme.of(context).dialogTheme.backgroundColor ?? Colors.white)
+                                      .withValues(alpha: 0.0),
+                                  (Theme.of(context).dialogTheme.backgroundColor ?? Colors.white)
+                                      .withValues(alpha: 0.9),
                                 ],
                               ),
                             ),
@@ -267,7 +265,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.7),
+                                            .withValues(alpha: 0.7),
                                       ),
                                     ),
                                   ],
@@ -290,3 +288,6 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     );
   }
 }
+
+
+

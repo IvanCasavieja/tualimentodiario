@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -167,7 +167,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         }
       }
     } catch (e) {
-      _handleFirestoreError(e, context: 'cargando página');
+      _handleFirestoreError(e, context: 'cargando pÃ¡gina');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -209,7 +209,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se encontró el alimento con los filtros actuales.')),
+        const SnackBar(content: Text('No se encontrÃ³ el alimento con los filtros actuales.')),
       );
     }
   }
@@ -273,7 +273,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
           : initial,
       firstDate: first,
       lastDate: last,
-      helpText: 'Seleccioná la fecha',
+      helpText: 'SeleccionÃ¡ la fecha',
       cancelText: 'Cancelar',
       confirmText: 'Aceptar',
       useRootNavigator: true,
@@ -311,9 +311,9 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         (msg.contains('requires an index') ||
             msg.contains('index is currently building'))) {
       _setError(
-        'El filtro por estados de ánimo necesita un índice de Firestore y '
-        'ese índice todavía se está construyendo. Cuando quede listo, '
-        'los resultados aparecerán ordenados por fecha (10 por página).',
+        'El filtro por estados de Ã¡nimo necesita un Ã­ndice de Firestore y '
+        'ese Ã­ndice todavÃ­a se estÃ¡ construyendo. Cuando quede listo, '
+        'los resultados aparecerÃ¡n ordenados por fecha (10 por pÃ¡gina).',
         msg,
       );
     } else {
@@ -389,16 +389,16 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                       label: Text(
                         activeMood.label,
                         style: TextStyle(
-                          color: activeMood.color.withOpacity(.95),
+                          color: activeMood.color.withValues(alpha: .95),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       onDeleted: _clearMood,
                       deleteIconColor: activeMood.color,
-                      backgroundColor: activeMood.color.withOpacity(.12),
+                      backgroundColor: activeMood.color.withValues(alpha: .12),
                       shape: StadiumBorder(
                         side: BorderSide(
-                          color: activeMood.color.withOpacity(.35),
+                          color: activeMood.color.withValues(alpha: .35),
                         ),
                       ),
                     ),
@@ -451,7 +451,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                 fallback: 'es',
                               );
                               final verse =
-                                  (tmap['verse'] as String?)?.trim() ?? '—';
+                                  (tmap['verse'] as String?)?.trim() ?? 'â€”';
                               final description =
                                   (tmap['description'] as String?)?.trim() ?? '';
                               final dateStr = (data['date'] as String?) ?? '';
@@ -462,7 +462,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                   gradient: LinearGradient(
                                     colors: [
                                       Colors.white,
-                                      Colors.white.withOpacity(.965)
+                                      Colors.white.withValues(alpha: .965)
                                     ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
@@ -471,7 +471,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                   boxShadow: [
                                     BoxShadow(
                                       color:
-                                          Colors.black12.withOpacity(.06),
+                                          Colors.black12.withValues(alpha: .06),
                                       blurRadius: 14,
                                       offset: const Offset(0, 6),
                                     ),
@@ -514,7 +514,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                                 ellipsize(description, 130),
                                                 style: TextStyle(
                                                   color: Colors.black
-                                                      .withOpacity(.75),
+                                                      .withValues(alpha: .75),
                                                 ),
                                               ),
                                               const SizedBox(height: 10),
@@ -661,13 +661,13 @@ class _DateChip extends StatelessWidget {
       padding:
           const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(.12),
+        color: color.withValues(alpha: .12),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: color.withOpacity(.25)),
+        border: Border.all(color: color.withValues(alpha: .25)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: color.withOpacity(.9)),
+          Icon(icon, size: 14, color: color.withValues(alpha: .9)),
           const SizedBox(width: 6),
           Text(
             text,
@@ -749,7 +749,7 @@ class _Paginator extends StatelessWidget {
                         ? Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.1)
+                            .withValues(alpha: 0.1)
                         : null,
                   ),
                   onPressed: () => onJump(p),
@@ -769,3 +769,4 @@ class _Paginator extends StatelessWidget {
     );
   }
 }
+
