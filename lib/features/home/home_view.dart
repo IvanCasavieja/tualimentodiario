@@ -6,12 +6,13 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_state.dart'
     show AppLang, languageProvider, selectedFoodIdProvider, bottomTabIndexProvider;
-import '../../core/i18n.dart';
+import '../../core/i18n.dart'; // stringsProvider
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
+
   @override
   ConsumerState<HomeView> createState() => _HomeViewState();
 }
@@ -30,7 +31,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
   @override
   void initState() {
     super.initState();
-    _moodsSub = ref.listenManual<Set<String>>(moodsFilterProvider, (prev, next) {
+    _moodsSub =
+        ref.listenManual<Set<String>>(moodsFilterProvider, (prev, next) {
       final had = (prev ?? {}).isNotEmpty;
       final has = next.isNotEmpty;
       if (has && (!had || (prev!.first != next.first))) {
@@ -64,7 +66,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
       if (snap.docs.isEmpty) return;
       final doc = snap.docs[Random().nextInt(snap.docs.length)];
       ref.read(selectedFoodIdProvider.notifier).state = doc.id;
-      ref.read(bottomTabIndexProvider.notifier).state = 1; // Archivo
+      ref.read(bottomTabIndexProvider.notifier).state = 1;
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,8 +78,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
   @override
   Widget build(BuildContext context) {
     final appLang = ref.watch(languageProvider);
+    final t = ref.watch(stringsProvider);
     final langCode = _toCode(appLang);
-    final s = ref.watch(stringsProvider);
 
     return Container(
       decoration: const BoxDecoration(gradient: _bgGradient),
@@ -88,7 +90,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.black87,
           centerTitle: true,
-          title: Text(s.appTitle),
+          title: Text(t.appTitle),
         ),
         body: SafeArea(
           child: StreamBuilder<QuerySnapshot>(
@@ -108,11 +110,13 @@ class _HomeViewState extends ConsumerState<HomeView> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
                   _HeroHeader(
+                    title: t.headerDailyFood,
+                    subtitle: t.headerSubtitle,
                     primary: _primary,
                     accent: _accent,
                     onRandom: _openRandom,
+                    randomLabel: t.headerSurprise,
                     chips: const MoodChips(),
-                    s: s,
                   ),
                   const SizedBox(height: 12),
                   ...docs.map((d) {
@@ -122,11 +126,14 @@ class _HomeViewState extends ConsumerState<HomeView> {
                     final translations =
                         (data['translations'] as Map?)?.cast<String, dynamic>() ??
                             {};
-                    final t =
-                        _pickLangMap(translations, primary: langCode, fallback: 'es');
-                    final verse = (t['verse'] as String?)?.trim() ?? '—';
+                    final tr = _pickLangMap(
+                      translations,
+                      primary: langCode,
+                      fallback: 'es',
+                    );
+                    final verse = (tr['verse'] as String?)?.trim() ?? '—';
                     final description =
-                        (t['description'] as String?)?.trim() ?? '—';
+                        (tr['description'] as String?)?.trim() ?? '—';
                     return _FoodCard(
                       id: id,
                       verse: verse,
@@ -149,7 +156,6 @@ class _HomeViewState extends ConsumerState<HomeView> {
     );
   }
 
-  // Helpers
   static String _toCode(AppLang l) {
     switch (l) {
       case AppLang.es:
@@ -163,8 +169,11 @@ class _HomeViewState extends ConsumerState<HomeView> {
     }
   }
 
-  static Map<String, dynamic> _pickLangMap(Map<String, dynamic> translations,
-      {required String primary, required String fallback}) {
+  static Map<String, dynamic> _pickLangMap(
+    Map<String, dynamic> translations, {
+    required String primary,
+    required String fallback,
+  }) {
     if (translations[primary] is Map) {
       return (translations[primary] as Map).cast<String, dynamic>();
     }
@@ -202,18 +211,22 @@ class _HomeViewState extends ConsumerState<HomeView> {
   }
 }
 
-// ---------- UI header ----------
 class _HeroHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String randomLabel;
   final Color primary, accent;
   final VoidCallback onRandom;
   final Widget chips;
-  final Strings s;
+
   const _HeroHeader({
+    required this.title,
+    required this.subtitle,
+    required this.randomLabel,
     required this.primary,
     required this.accent,
     required this.onRandom,
     required this.chips,
-    required this.s,
   });
 
   @override
@@ -230,22 +243,15 @@ class _HeroHeader extends StatelessWidget {
           Container(
             width: 42,
             height: 42,
-            decoration:
-                BoxDecoration(color: primary, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: primary, borderRadius: BorderRadius.circular(12)),
             child: const Icon(Icons.auto_awesome, color: Colors.white),
           ),
           const SizedBox(width: 12),
-          Expanded(
-              child: Text(s.headerDailyFood,
-                  style:
-                      const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
-          _PillIconButton(icon: Icons.casino, label: s.headerSurprise, fg: primary, onTap: onRandom),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+          _PillIconButton(icon: Icons.casino, label: randomLabel, fg: primary, onTap: onRandom),
         ]),
         const SizedBox(height: 10),
-        Text(
-          s.headerSubtitle,
-          style: TextStyle(color: Colors.black.withOpacity(.7), height: 1.25),
-        ),
+        Text(subtitle, style: TextStyle(color: Colors.black.withOpacity(.7), height: 1.25)),
         const SizedBox(height: 12),
         chips,
       ]),
@@ -258,8 +264,7 @@ class _PillIconButton extends StatelessWidget {
   final String label;
   final Color fg;
   final VoidCallback onTap;
-  const _PillIconButton(
-      {required this.icon, required this.label, required this.fg, required this.onTap});
+  const _PillIconButton({required this.icon, required this.label, required this.fg, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -313,10 +318,7 @@ class _FoodCard extends StatelessWidget {
             end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black12.withOpacity(.06),
-              blurRadius: 14,
-              offset: const Offset(0, 6))
+          BoxShadow(color: Colors.black12.withOpacity(.06), blurRadius: 14, offset: const Offset(0, 6))
         ],
       ),
       child: InkWell(
@@ -325,16 +327,11 @@ class _FoodCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-                width: 6,
-                height: 72,
-                decoration:
-                    BoxDecoration(color: primary, borderRadius: BorderRadius.circular(8))),
+            Container(width: 6, height: 72, decoration: BoxDecoration(color: primary, borderRadius: BorderRadius.circular(8))),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(verse,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                Text(verse, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
                 Text(_short(description), style: TextStyle(color: Colors.black.withOpacity(.75))),
                 const SizedBox(height: 10),
@@ -360,20 +357,21 @@ class _DateChip extends StatelessWidget {
   final IconData icon;
   final Color color;
   const _DateChip({required this.text, required this.icon, required this.color});
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-          color: color.withOpacity(.12),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: color.withOpacity(.25))),
+        color: color.withOpacity(.12),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color.withOpacity(.25)),
+      ),
       child: Row(children: [
         Icon(icon, size: 14, color: color.withOpacity(.9)),
         const SizedBox(width: 6),
         Text(text,
-            style:
-                TextStyle(fontSize: 12, color: _darken(color), fontWeight: FontWeight.w600)),
+            style: TextStyle(fontSize: 12, color: _darken(color), fontWeight: FontWeight.w600)),
       ]),
     );
   }

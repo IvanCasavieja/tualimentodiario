@@ -1,5 +1,9 @@
+// lib/features/common/moods.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/app_state.dart' show languageProvider;
+import '../../core/moods_i18n.dart' show moodLabelI18n;
 
 class MoodDef {
   final String slug, label;
@@ -8,28 +12,31 @@ class MoodDef {
   const MoodDef(this.slug, this.label, this.icon, this.color);
 }
 
+/// Labels base en ES (fallback)
 const kMoods = <MoodDef>[
   MoodDef('esperanza', 'Esperanza', Icons.wb_sunny_outlined, Color(0xFF48C1F1)),
-  MoodDef('gratitud',  'Gratitud',  Icons.favorite_outline,  Color(0xFF6C4DF5)),
+  MoodDef('gratitud', 'Gratitud', Icons.favorite_outline, Color(0xFF6C4DF5)),
   MoodDef('fortaleza', 'Fortaleza', Icons.fitness_center_outlined, Color(0xFF48C1F1)),
-  MoodDef('paz',       'Paz',       Icons.self_improvement_outlined, Color(0xFF6C4DF5)),
-  MoodDef('alegria',   'Alegría',   Icons.emoji_emotions_outlined, Color(0xFF48C1F1)),
-  MoodDef('consuelo',  'Consuelo',  Icons.volunteer_activism_outlined, Color(0xFF6C4DF5)),
-  MoodDef('sabiduria', 'Sabiduría', Icons.psychology_outlined,        Color(0xFF48C1F1)),
-  MoodDef('fe',        'Fe',        Icons.auto_fix_high,               Color(0xFF6C4DF5)),
-  MoodDef('perdon',    'Perdón',    Icons.handshake_outlined,          Color(0xFF48C1F1)),
-  MoodDef('paciencia', 'Paciencia', Icons.hourglass_empty,             Color(0xFF6C4DF5)),
+  MoodDef('paz', 'Paz', Icons.self_improvement_outlined, Color(0xFF6C4DF5)),
+  MoodDef('alegria', 'Alegría', Icons.emoji_emotions_outlined, Color(0xFF48C1F1)),
+  MoodDef('consuelo', 'Consuelo', Icons.volunteer_activism_outlined, Color(0xFF6C4DF5)),
+  MoodDef('sabiduria', 'Sabiduría', Icons.psychology_outlined, Color(0xFF48C1F1)),
+  MoodDef('fe', 'Fe', Icons.auto_fix_high, Color(0xFF6C4DF5)),
+  MoodDef('perdon', 'Perdón', Icons.handshake_outlined, Color(0xFF48C1F1)),
+  MoodDef('paciencia', 'Paciencia', Icons.hourglass_empty, Color(0xFF6C4DF5)),
 ];
 
-/// Set con **0 o 1** slug activo (selección única).
 final moodsFilterProvider = StateProvider<Set<String>>((_) => {});
 
-MoodDef? moodBySlug(String slug) =>
-    kMoods.firstWhere((m) => m.slug == slug, orElse: () => const MoodDef('', '', Icons.abc, Colors.grey)).slug.isEmpty
-        ? null
-        : kMoods.firstWhere((m) => m.slug == slug);
+MoodDef? moodBySlug(String slug) {
+  try {
+    return kMoods.firstWhere((m) => m.slug == slug);
+  } catch (_) {
+    return null;
+  }
+}
 
-/// Chips SOLO para Home.
+/// Chips SOLO para Home – ahora traducidos con la misma fuente que Admin.
 class MoodChips extends ConsumerWidget {
   const MoodChips({super.key});
 
@@ -37,6 +44,7 @@ class MoodChips extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(moodsFilterProvider);
     final active = selected.isEmpty ? null : selected.first;
+    final langCode = ref.watch(languageProvider).name; // 'es'|'en'|'pt'|'it'
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -46,6 +54,12 @@ class MoodChips extends ConsumerWidget {
           final bg = isSel ? m.color.withOpacity(.18) : Colors.white;
           final border = isSel ? m.color.withOpacity(.5) : Colors.black12;
 
+          final label = moodLabelI18n(
+            slug: m.slug,
+            langCode: langCode,
+            fallbackLabel: m.label, // ES por defecto
+          );
+
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Material(
@@ -53,7 +67,6 @@ class MoodChips extends ConsumerWidget {
               borderRadius: BorderRadius.circular(28),
               child: InkWell(
                 onTap: () {
-                  // Selección única: si tocás el mismo, limpia; si tocás otro, reemplaza.
                   final next = <String>{};
                   if (!isSel) next.add(m.slug);
                   ref.read(moodsFilterProvider.notifier).state = next;
@@ -70,7 +83,7 @@ class MoodChips extends ConsumerWidget {
                       Icon(m.icon, size: 16, color: m.color),
                       const SizedBox(width: 6),
                       Text(
-                        m.label,
+                        label,
                         style: TextStyle(
                           color: m.color.withOpacity(.9),
                           fontWeight: FontWeight.w600,

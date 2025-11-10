@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_state.dart';
-import 'core/i18n.dart';
+import 'core/i18n.dart'; // stringsProvider
 import 'features/home/home_view.dart';
 import 'features/archive/archive_view.dart';
 import 'features/favorites/favorites_view.dart';
@@ -39,10 +39,10 @@ class App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(languageProvider);
-    final s = ref.watch(stringsProvider);
+    final t = ref.watch(stringsProvider);
 
     return MaterialApp(
-      title: s.appTitle,
+      title: t.appTitle,
       debugShowCheckedModeBanner: false,
       locale: Locale(_toCode(lang)),
       supportedLocales: const [
@@ -87,7 +87,7 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
   @override
   Widget build(BuildContext context) {
     final idx = ref.watch(bottomTabIndexProvider);
-    final s = ref.watch(stringsProvider);
+    final t = ref.watch(stringsProvider);
 
     return Scaffold(
       body: IndexedStack(index: idx, children: pages),
@@ -99,19 +99,19 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
           NavigationDestination(
               icon: const Icon(Icons.home_outlined),
               selectedIcon: const Icon(Icons.home),
-              label: s.navHome),
+              label: t.navHome),
           NavigationDestination(
               icon: const Icon(Icons.folder_copy_outlined),
               selectedIcon: const Icon(Icons.folder),
-              label: s.navArchive),
+              label: t.navArchive),
           NavigationDestination(
               icon: const Icon(Icons.favorite_border),
               selectedIcon: const Icon(Icons.favorite),
-              label: s.navFavorites),
+              label: t.navFavorites),
           NavigationDestination(
               icon: const Icon(Icons.person_outline),
               selectedIcon: const Icon(Icons.person),
-              label: s.navProfile),
+              label: t.navProfile),
         ],
       ),
     );

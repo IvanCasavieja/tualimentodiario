@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_state.dart'; // languageProvider, selectedFoodIdProvider
-import '../../core/i18n.dart';
 import '../../core/models/daily_food.dart';
-import '../../core/ui_utils.dart';
+import '../../core/ui_utils.dart'; // ellipsize
+import '../../core/i18n.dart'; // stringsProvider
 import '../common/food_detail_dialog.dart';
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
@@ -14,6 +14,7 @@ import '../common/moods.dart';
 class ArchiveView extends ConsumerStatefulWidget {
   final String? initialFoodId;
   const ArchiveView({super.key, this.initialFoodId});
+
   @override
   ConsumerState<ArchiveView> createState() => _ArchiveViewState();
 }
@@ -36,7 +37,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   int _totalCount = 0;
   int _totalPages = 0;
   int _currentPage = 1;
-
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _pageCursors = [];
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _items = [];
 
@@ -56,15 +56,18 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   void initState() {
     super.initState();
 
-    _selSub = ref.listenManual<String?>(selectedFoodIdProvider, (prev, next) {
+    _selSub =
+        ref.listenManual<String?>(selectedFoodIdProvider, (prev, next) async {
       if (next != null) {
-        _openById(next);
+        await _openById(next);
         ref.read(selectedFoodIdProvider.notifier).state = null;
       }
     });
 
     _moodsSub =
-        ref.listenManual<Set<String>>(moodsFilterProvider, (prev, next) => _applyFilter());
+        ref.listenManual<Set<String>>(moodsFilterProvider, (prev, next) {
+      _applyFilter();
+    });
 
     final pending = ref.read(selectedFoodIdProvider);
     if (pending != null) {
@@ -110,7 +113,8 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       _setError(null, null);
       final snap = await _filteredQuery().count().get();
       _totalCount = snap.count ?? 0;
-      _totalPages = _totalCount == 0 ? 1 : ((_totalCount + _pageSize - 1) ~/ _pageSize);
+      _totalPages =
+          _totalCount == 0 ? 1 : ((_totalCount + _pageSize - 1) ~/ _pageSize);
       if (!mounted) return;
       setState(() {});
     } catch (e) {
@@ -130,6 +134,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       _items.clear();
       _setError(null, null);
     });
+
     try {
       if (targetPage < 1) targetPage = 1;
       if (targetPage > _totalPages) targetPage = _totalPages;
@@ -149,7 +154,9 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       if (prevCursor != null) q = q.startAfterDocument(prevCursor);
       final pageSnap = await q.get();
 
-      _items..clear()..addAll(pageSnap.docs);
+      _items
+        ..clear()
+        ..addAll(pageSnap.docs);
       _currentPage = targetPage;
 
       if (_pageCursors.length < targetPage) {
@@ -179,6 +186,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       return;
     }
     final start = _currentPage;
+
     for (int p = start; p <= _totalPages; p++) {
       if (p != _currentPage) await _loadPage(p);
       final idx = _items.indexWhere((d) => d.id == id);
@@ -187,6 +195,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         return;
       }
     }
+
     if (start != 1) {
       for (int p = 1; p < start; p++) {
         await _loadPage(p);
@@ -197,6 +206,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         }
       }
     }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se encontró el alimento con los filtros actuales.')),
@@ -243,14 +253,24 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
+  DateTime? _tryParseYMD(String s) {
+    try {
+      return DateFormat('yyyy-MM-dd').parseStrict(s);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _pickDateFor(TextEditingController ctrl) async {
     final initial = _tryParseYMD(ctrl.text) ?? DateTime.now();
     final first = DateTime(2000, 1, 1);
     final last = DateTime(2100, 12, 31);
+
     final picked = await showDatePicker(
       context: context,
-      initialDate:
-          initial.isBefore(first) || initial.isAfter(last) ? DateTime.now() : initial,
+      initialDate: initial.isBefore(first) || initial.isAfter(last)
+          ? DateTime.now()
+          : initial,
       firstDate: first,
       lastDate: last,
       helpText: 'Seleccioná la fecha',
@@ -271,14 +291,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
-  DateTime? _tryParseYMD(String s) {
-    try {
-      return DateFormat('yyyy-MM-dd').parseStrict(s);
-    } catch (_) {
-      return null;
-    }
-  }
-
   void _openDetail(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final item = DailyFood.fromDoc(doc);
     final lang = _langCode;
@@ -296,10 +308,12 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   void _handleFirestoreError(Object e, {required String context}) {
     final msg = e.toString();
     if (msg.contains('FAILED_PRECONDITION') &&
-        (msg.contains('requires an index') || msg.contains('index is currently building'))) {
+        (msg.contains('requires an index') ||
+            msg.contains('index is currently building'))) {
       _setError(
-        'El filtro por estados de ánimo necesita un índice de Firestore y ese índice '
-        'todavía se está construyendo. Cuando quede listo, los resultados aparecerán.',
+        'El filtro por estados de ánimo necesita un índice de Firestore y '
+        'ese índice todavía se está construyendo. Cuando quede listo, '
+        'los resultados aparecerán ordenados por fecha (10 por página).',
         msg,
       );
     } else {
@@ -307,17 +321,24 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
+  void _clearMood() {
+    ref.read(moodsFilterProvider.notifier).state = {};
+    _applyFilter();
+  }
+
   @override
   Widget build(BuildContext context) {
-    ref.watch(languageProvider);
-    final s = ref.watch(stringsProvider);
+    // i18n
+    final t = ref.watch(stringsProvider);
 
+    // Rebuild si cambia idioma y/moods
+    ref.watch(languageProvider);
     final selected = ref.watch(moodsFilterProvider);
     final activeSlug = selected.isEmpty ? null : selected.first;
     final activeMood = activeSlug == null ? null : moodBySlug(activeSlug);
 
     return Scaffold(
-      appBar: AppBar(title: Text(s.archiveTitle)),
+      appBar: AppBar(title: Text(t.archiveTitle)),
       body: Column(
         children: [
           // Filtros
@@ -330,7 +351,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                     Expanded(
                       child: _DateField(
                         controller: _fromCtrl,
-                        label: s.filterFrom,
+                        label: t.filterFrom,
                         onPick: () => _pickDateFor(_fromCtrl),
                         onClear: () {
                           _fromCtrl.clear();
@@ -342,7 +363,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                     Expanded(
                       child: _DateField(
                         controller: _toCtrl,
-                        label: s.filterTo,
+                        label: t.filterTo,
                         onPick: () => _pickDateFor(_toCtrl),
                         onClear: () {
                           _toCtrl.clear();
@@ -354,7 +375,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                     FilledButton.icon(
                       onPressed: _loading ? null : _applyFilter,
                       icon: const Icon(Icons.filter_alt),
-                      label: Text(s.filterBtn),
+                      label: Text(t.filterBtn),
                     ),
                   ],
                 ),
@@ -363,7 +384,8 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: InputChip(
-                      avatar: Icon(activeMood.icon, size: 16, color: activeMood.color),
+                      avatar:
+                          Icon(activeMood.icon, size: 16, color: activeMood.color),
                       label: Text(
                         activeMood.label,
                         style: TextStyle(
@@ -371,11 +393,13 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      onDeleted: null, // sin limpiar desde acá
+                      onDeleted: _clearMood,
                       deleteIconColor: activeMood.color,
                       backgroundColor: activeMood.color.withOpacity(.12),
                       shape: StadiumBorder(
-                        side: BorderSide(color: activeMood.color.withOpacity(.35)),
+                        side: BorderSide(
+                          color: activeMood.color.withOpacity(.35),
+                        ),
                       ),
                     ),
                   ),
@@ -389,11 +413,16 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? _FriendlyError(message: _error!, raw: _rawError)
+                    ? _FriendlyError(
+                        message: _error!,
+                        raw: _rawError,
+                        onClearMood: _clearMood,
+                      )
                     : _items.isEmpty
-                        ? Center(child: Text(s.noResults))
+                        ? Center(child: Text(t.noResults))
                         : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                            padding:
+                                const EdgeInsets.fromLTRB(12, 0, 12, 8),
                             itemCount: _items.length + 1,
                             itemBuilder: (ctx, i) {
                               if (i == _items.length) {
@@ -401,36 +430,48 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                   current: _currentPage,
                                   total: _totalPages,
                                   window: _pagerWindow,
-                                  onPrev:
-                                      _currentPage > 1 ? () => _loadPage(_currentPage - 1) : null,
+                                  onPrev: _currentPage > 1
+                                      ? () => _loadPage(_currentPage - 1)
+                                      : null,
                                   onNext: _currentPage < _totalPages
                                       ? () => _loadPage(_currentPage + 1)
                                       : null,
                                   onJump: (p) => _loadPage(p),
                                 );
                               }
+
                               final doc = _items[i];
                               final data = doc.data();
-                              final translations =
-                                  (data['translations'] as Map?)?.cast<String, dynamic>() ?? {};
-                              final t =
-                                  _pickLangMap(translations, primary: _langCode, fallback: 'es');
-                              final verse = (t['verse'] as String?)?.trim() ?? '—';
-                              final description = (t['description'] as String?)?.trim() ?? '';
+                              final translations = (data['translations'] as Map?)
+                                      ?.cast<String, dynamic>() ??
+                                  {};
+                              final tmap = _pickLangMap(
+                                translations,
+                                primary: _langCode,
+                                fallback: 'es',
+                              );
+                              final verse =
+                                  (tmap['verse'] as String?)?.trim() ?? '—';
+                              final description =
+                                  (tmap['description'] as String?)?.trim() ?? '';
                               final dateStr = (data['date'] as String?) ?? '';
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [Colors.white, Colors.white.withOpacity(.965)],
+                                    colors: [
+                                      Colors.white,
+                                      Colors.white.withOpacity(.965)
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black12.withOpacity(.06),
+                                      color:
+                                          Colors.black12.withOpacity(.06),
                                       blurRadius: 14,
                                       offset: const Offset(0, 6),
                                     ),
@@ -440,22 +481,26 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                   borderRadius: BorderRadius.circular(20),
                                   onTap: () => _openDetail(doc),
                                   child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                                    padding: const EdgeInsets.fromLTRB(
+                                        14, 14, 14, 12),
                                     child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Container(
                                           width: 6,
                                           height: 72,
                                           decoration: BoxDecoration(
                                             color: _primary,
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 verse,
@@ -468,29 +513,36 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                               Text(
                                                 ellipsize(description, 130),
                                                 style: TextStyle(
-                                                  color: Colors.black.withOpacity(.75),
+                                                  color: Colors.black
+                                                      .withOpacity(.75),
                                                 ),
                                               ),
                                               const SizedBox(height: 10),
                                               Row(
                                                 mainAxisAlignment:
-                                                    MainAxisAlignment.spaceBetween,
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
                                                 children: [
                                                   _DateChip(
-                                                    text: _formatDate(dateStr),
+                                                    text:
+                                                        _formatDate(dateStr),
                                                     icon: Icons.event,
                                                     color: _accent,
                                                   ),
                                                   Row(
-                                                    mainAxisSize: MainAxisSize.min,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
                                                       FavoriteHeart(
-                                                          foodId: doc.id, iconSize: 22),
+                                                          foodId: doc.id,
+                                                          iconSize: 22),
                                                       const SizedBox(width: 4),
                                                       IconButton(
-                                                        icon: const Icon(Icons.open_in_new),
+                                                        icon: const Icon(
+                                                            Icons.open_in_new),
                                                         tooltip: 'Abrir',
-                                                        onPressed: () => _openDetail(doc),
+                                                        onPressed: () =>
+                                                            _openDetail(doc),
                                                       ),
                                                     ],
                                                   ),
@@ -513,30 +565,44 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   }
 }
 
-// ===================== UI auxiliares =====================
 class _FriendlyError extends StatelessWidget {
   final String message;
   final String? raw;
-  const _FriendlyError({required this.message, this.raw});
+  final VoidCallback onClearMood;
+  const _FriendlyError(
+      {required this.message, this.raw, required this.onClearMood});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(message),
-        if (raw != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Text(raw!, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(message),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: onClearMood,
+            icon: const Icon(Icons.clear_all),
+            label: const Text('Quitar filtro'),
           ),
+          if (raw != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Text(
+                raw!,
+                style: const TextStyle(fontSize: 12, color: Colors.black87),
+              ),
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
@@ -565,7 +631,11 @@ class _DateField extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (hasValue)
-              IconButton(tooltip: 'Limpiar', icon: const Icon(Icons.clear), onPressed: onClear),
+              IconButton(
+                tooltip: 'Limpiar',
+                icon: const Icon(Icons.clear),
+                onPressed: onClear,
+              ),
             IconButton(
               tooltip: 'Seleccionar fecha',
               icon: const Icon(Icons.calendar_today),
@@ -584,23 +654,31 @@ class _DateChip extends StatelessWidget {
   final IconData icon;
   final Color color;
   const _DateChip({required this.text, required this.icon, required this.color});
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withOpacity(.12),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: color.withOpacity(.25)),
       ),
-      child: Row(children: [
-        Icon(icon, size: 14, color: color.withOpacity(.9)),
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: TextStyle(fontSize: 12, color: _darken(color), fontWeight: FontWeight.w600),
-        ),
-      ]),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color.withOpacity(.9)),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: _darken(color),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -610,14 +688,14 @@ class _DateChip extends StatelessWidget {
   }
 }
 
-// ===================== Paginador =====================
 class _Paginator extends StatelessWidget {
   final int current; // 1-based
   final int total;
-  final int window; // cantidad de botones visibles
+  final int window;
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
   final void Function(int page) onJump;
+
   const _Paginator({
     required this.current,
     required this.total,
@@ -631,40 +709,62 @@ class _Paginator extends StatelessWidget {
   Widget build(BuildContext context) {
     if (total <= 1) return const SizedBox.shrink();
     final half = window ~/ 2;
-    int start = (current - half).clamp(1, (total - window + 1).clamp(1, total));
+    int start =
+        (current - half).clamp(1, (total - window + 1).clamp(1, total));
     int end = (start + window - 1).clamp(1, total);
     if (end - start + 1 < window && start > 1) {
       start = (end - window + 1).clamp(1, total);
     }
     final pages = List<int>.generate(end - start + 1, (i) => start + i);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          IconButton(onPressed: onPrev, icon: const Icon(Icons.chevron_left), constraints: const BoxConstraints(minWidth: 36, minHeight: 36), padding: EdgeInsets.zero),
-          ...pages.map((p) {
-            final selected = p == current;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(36, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  side: BorderSide(
-                    color: selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              onPressed: onPrev,
+              icon: const Icon(Icons.chevron_left),
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              padding: EdgeInsets.zero,
+            ),
+            ...pages.map((p) {
+              final selected = p == current;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(36, 36),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 8),
+                    side: BorderSide(
+                      color: selected
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade300,
+                    ),
+                    backgroundColor: selected
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1)
+                        : null,
                   ),
-                  backgroundColor:
-                      selected ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : null,
+                  onPressed: () => onJump(p),
+                  child: Text('$p'),
                 ),
-                onPressed: () => onJump(p),
-                child: Text('$p'),
-              ),
-            );
-          }),
-          IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right), constraints: const BoxConstraints(minWidth: 36, minHeight: 36), padding: EdgeInsets.zero),
-        ]),
+              );
+            }),
+            IconButton(
+              onPressed: onNext,
+              icon: const Icon(Icons.chevron_right),
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              padding: EdgeInsets.zero,
+            ),
+          ],
+        ),
       ),
     );
   }
