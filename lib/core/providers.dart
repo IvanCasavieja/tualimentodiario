@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,14 +10,15 @@ import 'firestore_repository.dart'; // FS
 /// ✅ AUTH STATE (anónimo o logueado)
 /// ---------------------------------------------------------------------------
 final authStateProvider = StreamProvider<User?>(
+  name: 'authStateProvider',
   (ref) => FirebaseAuth.instance.authStateChanges(),
 );
 
-// Alias opcional para compatibilidad con código viejo
+// Alias opcional
 @Deprecated('Usá authStateProvider')
 final authProvider = authStateProvider;
 
-/// Servicio de autenticación (email, google, guest, logout)
+/// Servicio de autenticación
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
 /// 🔹 Acción rápida: entrar en modo invitado (anon)
@@ -28,34 +30,62 @@ final signInAnonProvider = Provider<Future<User?> Function()>((ref) {
 });
 
 /// ---------------------------------------------------------------------------
-/// ✅ HOME STREAM (inicio)
+/// ✅ HOME STREAM
 /// ---------------------------------------------------------------------------
-/// Usa FS.homeQuery() de tu repositorio (últimos 5 publicados)
 final homeStreamProvider =
-    StreamProvider<QuerySnapshot<Map<String, dynamic>>>((ref) {
-  return FS.homeQuery().snapshots();
-});
+    StreamProvider<QuerySnapshot<Map<String, dynamic>>>(
+  name: 'homeStreamProvider',
+  (ref) => FS.homeQuery().snapshots(),
+);
 
 /// ---------------------------------------------------------------------------
-/// ✅ FAVORITOS DEL USUARIO (lista de IDs para la pantalla Favoritos)
+/// ✅ FAVORITOS
 /// ---------------------------------------------------------------------------
-/// Se mantiene igual: escucha la colección /users/{uid}/favorites
 final favoritesIdsProvider =
-    StreamProvider.family<List<String>, String>((ref, uid) {
-  return FS
+    StreamProvider.family<List<String>, String>(
+  (ref, uid) => FS
       .favCol(uid)
       .orderBy('createdAt', descending: true)
       .snapshots()
-      .map((s) => s.docs.map((d) => d.id).toList());
-});
+      .map((s) => s.docs.map((d) => d.id).toList()),
+  name: 'favoritesIdsProvider',
+);
+
+final isFavoriteProvider =
+    StreamProvider.family<bool, ({String uid, String foodId})>(
+  (ref, key) {
+    final docRef = FS.favCol(key.uid).doc(key.foodId);
+    return docRef.snapshots().map((doc) => doc.exists);
+  },
+  name: 'isFavoriteProvider',
+);
 
 /// ---------------------------------------------------------------------------
-/// ✅ ¿Es favorito? (stream del DOCUMENTO puntual /users/{uid}/favorites/{foodId})
+/// ✅ ¿ES ADMIN? -> existe admins/{uid}
+///   Requiere en rules: match /admins/{uid} { allow get: if request.auth.uid == uid; }
 /// ---------------------------------------------------------------------------
-/// No dependemos de listar la colección; con get del doc alcanza.
-/// Si el doc existe -> true; si no -> false.
-final isFavoriteProvider =
-    StreamProvider.family<bool, ({String uid, String foodId})>((ref, key) {
-  final docRef = FS.favCol(key.uid).doc(key.foodId);
-  return docRef.snapshots().map((doc) => doc.exists);
-});
+final userIsAdminProvider = StreamProvider<bool>(
+  name: 'userIsAdminProvider',
+  (ref) async* {
+    await for (final user in FirebaseAuth.instance.authStateChanges()) {
+      if (user == null) {
+        if (kDebugMode) debugPrint('[admin] user=null -> false');
+        yield false;
+      } else {
+        final path = 'admins/${user.uid}';
+        if (kDebugMode) debugPrint('[admin] listening $path');
+        yield* FirebaseFirestore.instance
+            .doc(path)
+            .snapshots()
+            .map((d) {
+              final ok = d.exists;
+              if (kDebugMode) debugPrint('[admin] $path exists=${d.exists} data=${d.data()}');
+              return ok;
+            })
+            .handleError((e) {
+              if (kDebugMode) debugPrint('[admin] ERROR leyendo $path -> $e');
+            });
+      }
+    }
+  },
+);

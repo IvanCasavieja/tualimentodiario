@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "138827358911-os685b0tdruva30en5t3d5ere3hpplqo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tu_alimento_diario",
+            "certificate_hash": "2a6731a35c9767765fe1799c32c89c4bf65c1018"
+          }
+        },
+        {
           "client_id": "138827358911-t0ocd8i6ibncsrmenmu6f8a57fau73i6.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

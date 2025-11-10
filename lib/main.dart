@@ -5,25 +5,26 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_state.dart';
+import 'core/i18n.dart';
 import 'features/home/home_view.dart';
 import 'features/archive/archive_view.dart';
 import 'features/favorites/favorites_view.dart';
 import 'features/profile/profile_view.dart';
+import 'debug/log_observer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // Sign-in anónimo
   if (FirebaseAuth.instance.currentUser == null) {
     await FirebaseAuth.instance.signInAnonymously();
   }
 
-  // Idioma guardado
   final savedLang = await LanguagePrefs.load();
 
   runApp(
     ProviderScope(
+      observers: [LogObserver()],
       overrides: [
         languageProvider.overrideWith((ref) => savedLang),
       ],
@@ -38,8 +39,10 @@ class App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(languageProvider);
+    final s = ref.watch(stringsProvider);
+
     return MaterialApp(
-      title: 'Tu Alimento Diario',
+      title: s.appTitle,
       debugShowCheckedModeBanner: false,
       locale: Locale(_toCode(lang)),
       supportedLocales: const [
@@ -62,7 +65,6 @@ class App extends ConsumerWidget {
       case AppLang.it:
         return 'it';
       case AppLang.es:
-      default:
         return 'es';
     }
   }
@@ -85,34 +87,31 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
   @override
   Widget build(BuildContext context) {
     final idx = ref.watch(bottomTabIndexProvider);
+    final s = ref.watch(stringsProvider);
+
     return Scaffold(
-      // ✅ Mantiene montadas todas las pestañas
       body: IndexedStack(index: idx, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: idx,
         onDestinationSelected: (i) =>
             ref.read(bottomTabIndexProvider.notifier).state = i,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Inicio',
-          ),
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home),
+              label: s.navHome),
           NavigationDestination(
-            icon: Icon(Icons.folder_copy_outlined),
-            selectedIcon: Icon(Icons.folder),
-            label: 'Archivo',
-          ),
+              icon: const Icon(Icons.folder_copy_outlined),
+              selectedIcon: const Icon(Icons.folder),
+              label: s.navArchive),
           NavigationDestination(
-            icon: Icon(Icons.favorite_border),
-            selectedIcon: Icon(Icons.favorite),
-            label: 'Favoritos',
-          ),
+              icon: const Icon(Icons.favorite_border),
+              selectedIcon: const Icon(Icons.favorite),
+              label: s.navFavorites),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: s.navProfile),
         ],
       ),
     );

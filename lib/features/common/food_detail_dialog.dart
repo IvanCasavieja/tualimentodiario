@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/models/daily_food.dart';
 import '../../core/ui_utils.dart';
+import '../../core/i18n.dart'; // stringsProvider
 import '../common/favorite_heart.dart';
 
-class FoodDetailDialog extends StatefulWidget {
+class FoodDetailDialog extends ConsumerStatefulWidget {
   const FoodDetailDialog({
     super.key,
     required this.item,
@@ -16,22 +18,24 @@ class FoodDetailDialog extends StatefulWidget {
   final String lang;
 
   @override
-  State<FoodDetailDialog> createState() => _FoodDetailDialogState();
+  ConsumerState<FoodDetailDialog> createState() => _FoodDetailDialogState();
 }
 
-class _FoodDetailDialogState extends State<FoodDetailDialog>
+class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     with SingleTickerProviderStateMixin {
   final _scrollCtrl = ScrollController();
   bool _canScroll = false;
   bool _atEnd = false;
 
-  late final AnimationController _hintAnim =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
-        ..repeat(reverse: true);
+  late final AnimationController _hintAnim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
   late final Animation<double> _hintOffset =
       Tween<double>(begin: 0, end: 6).animate(
-        CurvedAnimation(parent: _hintAnim, curve: Curves.easeInOut),
-      );
+    CurvedAnimation(parent: _hintAnim, curve: Curves.easeInOut),
+  );
 
   @override
   void initState() {
@@ -87,20 +91,18 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
 
   @override
   Widget build(BuildContext context) {
+    final t = ref.watch(stringsProvider);
+
     final item = widget.item;
-    final t = _pickLang(Map<String, dynamic>.from(item.translations));
-    final verse = (t['verse'] ?? '').toString().trim();
-    final description = (t['description'] ?? '').toString().trim();
-    final prayer = (t['prayer'] ?? '').toString().trim();
-    final reflection = (t['reflection'] ?? '').toString().trim();
+    final tr = _pickLang(Map<String, dynamic>.from(item.translations));
+    final verse = (tr['verse'] ?? '').toString().trim();
+    final description = (tr['description'] ?? '').toString().trim();
+    final prayer = (tr['prayer'] ?? '').toString().trim();
+    final reflection = (tr['reflection'] ?? '').toString().trim();
     final farewell = langFarewell(widget.lang);
 
-    // Solo mostramos la fecha (sin autor)
-    final meta = (item.date != null && item.date!.isNotEmpty)
-        ? _formatDate(item.date!)
-        : '';
+    final meta = (item.date.isNotEmpty) ? _formatDate(item.date) : '';
 
-    // medidas del dialog
     final mq = MediaQuery.of(context);
     final maxWidth = mq.size.width.clamp(320.0, 560.0);
     final maxHeight = mq.size.height * 0.82;
@@ -116,7 +118,7 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ------------------ Header ------------------
+              // Header
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -134,7 +136,7 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
                   const SizedBox(width: 6),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    tooltip: 'Cerrar',
+                    tooltip: t.close,
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ],
@@ -151,7 +153,7 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
               ],
               const SizedBox(height: 10),
 
-              // ------------------ Contenido con scroll ------------------
+              // Content with scroll
               ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: contentScrollMaxHeight),
                 child: Stack(
@@ -169,7 +171,8 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
                               Text(
                                 description,
                                 textAlign: TextAlign.left,
-                                style: const TextStyle(fontSize: 15, height: 1.35),
+                                style: const TextStyle(
+                                    fontSize: 15, height: 1.35),
                               ),
                               const SizedBox(height: 12),
                             ],
@@ -177,14 +180,15 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
                               Text(
                                 reflection,
                                 textAlign: TextAlign.left,
-                                style: const TextStyle(fontSize: 15, height: 1.35),
+                                style: const TextStyle(
+                                    fontSize: 15, height: 1.35),
                               ),
                               const SizedBox(height: 12),
                             ],
                             if (prayer.isNotEmpty) ...[
-                              const Text(
-                                'Oración',
-                                style: TextStyle(
+                              Text(
+                                t.prayerTitle,
+                                style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -193,7 +197,8 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
                               Text(
                                 prayer,
                                 textAlign: TextAlign.left,
-                                style: const TextStyle(fontSize: 15, height: 1.35),
+                                style: const TextStyle(
+                                    fontSize: 15, height: 1.35),
                               ),
                               const SizedBox(height: 12),
                             ],
@@ -201,7 +206,9 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
                               '$farewell.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Theme.of(context).colorScheme.primary,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary,
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -210,7 +217,8 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
                         ),
                       ),
                     ),
-                    // ---- Indicador scroll ----
+
+                    // Scroll hint
                     if (_canScroll && !_atEnd) ...[
                       Positioned(
                         left: 0,
@@ -249,10 +257,11 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.keyboard_arrow_down, size: 20),
+                                    const Icon(Icons.keyboard_arrow_down,
+                                        size: 20),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Deslizá para ver más',
+                                      t.scrollHint,
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Theme.of(context)
@@ -272,6 +281,7 @@ class _FoodDetailDialogState extends State<FoodDetailDialog>
                   ],
                 ),
               ),
+
               const SizedBox(height: 10),
             ],
           ),

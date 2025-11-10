@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/providers.dart';              // authStateProvider, isFavoriteProvider
-import '../../core/firestore_repository.dart';  // FS
 
-/// Botón de favoritos sincronizado.
-/// - Si NO hay sesión: muestra snackbar pidiendo login.
-/// - Si hay sesión: togglea /users/{uid}/favorites/{foodId}.
+import '../../core/providers.dart'; // authStateProvider, isFavoriteProvider
+import '../../core/firestore_repository.dart'; // FS
+
 class FavoriteHeart extends ConsumerWidget {
   const FavoriteHeart({super.key, required this.foodId, this.iconSize = 24});
 
@@ -15,7 +13,6 @@ class FavoriteHeart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).value;
-
     if (user == null) {
       return IconButton(
         iconSize: iconSize,

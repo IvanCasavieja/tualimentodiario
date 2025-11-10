@@ -2,30 +2,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
 
+    // ---------- helpers ----------
     function signedIn() {
       return request.auth != null;
     }
-    function isAdmin() {
-      return signedIn() && request.auth.token.role == "admin";
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
     }
 
+    // Usado si algún día volvés a custom claims.
+    // (No se usa en estas reglas; lo dejamos comentado para evitar warning)
+    // function isAdminClaim() {
+    //   return signedIn() && request.auth.token.role == "admin";
+    // }
+
+    // Helper para evitar el warning de $(request...) en path
+    function adminDoc(uid) {
+      return get(/databases/$(db)/documents/admins/$(uid));
+    }
+    function isAdminByDoc() {
+      return signedIn() && adminDoc(request.auth.uid).exists();
+    }
+
+    // ---------- admins/{uid} ----------
+    // Estructura: /admins/{uid} -> { isAdmin: true }
+    // Solo el propio usuario puede leer su doc; nadie lista ni escribe desde cliente.
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    // ---------- dailyFoods/{docId} ----------
+    // Lectura pública. Escrituras solo si el usuario ES admin (doc existe).
     match /dailyFoods/{docId} {
-      allow read: if true;                     // lectura pública
-      allow create, update, delete: if isAdmin();  // solo admins
+      allow read: if true;
+      allow create, update, delete: if isAdminByDoc();
+      // Si preferís que NINGUNA escritura se haga desde cliente:
+      // allow create, update, delete: if false;
     }
 
+    // ---------- users/{uid} ----------
     match /users/{uid} {
-      allow read, create, update: if signedIn() && request.auth.uid == uid;
+      allow read, create, update: if isOwner(uid);
     }
 
+    // ---------- users/{uid}/favorites/{foodId} ----------
     match /users/{uid}/favorites/{foodId} {
-      allow read, create, delete: if signedIn() && request.auth.uid == uid;
+      allow get: if isOwner(uid);
+      allow list: if isOwner(uid);      // para listar en Favoritos
+      allow create, delete: if isOwner(uid);
       allow update: if false;
     }
 
     match /{document=**} {
-      allow read: if false;
-      allow write: if false;
+      allow read, write: if false;
     }
   }
 }

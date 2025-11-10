@@ -3,45 +3,42 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../core/app_state.dart'; // languageProvider
-import '../../core/providers.dart';  // authServiceProvider, authStateProvider
+import '../../core/app_state.dart'; // languageProvider, AppLang
+import '../../core/providers.dart'; // authServiceProvider, authStateProvider, userIsAdminProvider
+import '../../core/i18n.dart';
+import '../admin/admin_upload_view.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lang = ref.watch(languageProvider);
+    final s = ref.watch(stringsProvider);
     final authAsync = ref.watch(authStateProvider);
 
     return authAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Perfil')),
-        body: Center(child: Text('Error: $e')),
-      ),
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, _) => Scaffold(appBar: AppBar(title: Text(s.profileTitle)), body: Center(child: Text('Error: $e'))),
       data: (user) {
         if (user == null || user.isAnonymous) {
-          return _GuestProfile(lang: lang);
+          return const _GuestProfile();
         }
-        return _UserProfile(user: user, lang: lang);
+        return _UserProfile(user: user);
       },
     );
   }
 }
 
 class _GuestProfile extends ConsumerWidget {
-  const _GuestProfile({required this.lang});
-  final AppLang lang;
+  const _GuestProfile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     final auth = ref.read(authServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
+      appBar: AppBar(title: Text(s.profileTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -53,10 +50,11 @@ class _GuestProfile extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Center(
-            child: Text('Invitado', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
+          Center(child: Text(s.guest, style: const TextStyle(fontWeight: FontWeight.w600))),
+          const SizedBox(height: 8),
+          Center(child: Text(s.guestHint, style: const TextStyle(fontSize: 12, color: Colors.grey))),
           const SizedBox(height: 24),
+
           FilledButton.icon(
             onPressed: () async {
               try {
@@ -75,18 +73,19 @@ class _GuestProfile extends ConsumerWidget {
               }
             },
             icon: const Icon(Icons.g_mobiledata, size: 28),
-            label: const Text('Continuar con Google'),
+            label: Text(s.googleSignIn),
           ),
+
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => _showEmailDialog(context, ref, isRegister: false),
             icon: const Icon(Icons.login),
-            label: const Text('Iniciar sesión con email'),
+            label: Text(s.emailSignIn),
           ),
           const SizedBox(height: 8),
           TextButton(
             onPressed: () => _showEmailDialog(context, ref, isRegister: true),
-            child: const Text('Crear cuenta con email'),
+            child: Text(s.emailRegister),
           ),
         ],
       ),
@@ -94,6 +93,7 @@ class _GuestProfile extends ConsumerWidget {
   }
 
   Future<void> _showEmailDialog(BuildContext context, WidgetRef ref, {required bool isRegister}) async {
+    final s = ref.read(stringsProvider);
     final auth = ref.read(authServiceProvider);
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
@@ -101,24 +101,16 @@ class _GuestProfile extends ConsumerWidget {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(isRegister ? 'Crear cuenta' : 'Iniciar sesión'),
+        title: Text(isRegister ? s.emailRegister : s.emailSignIn),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: passCtrl,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Contraseña'),
-            ),
+            TextField(controller: emailCtrl, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: s.email)),
+            TextField(controller: passCtrl, obscureText: true, decoration: InputDecoration(labelText: s.password)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(s.cancel)),
           FilledButton(
             onPressed: () async {
               try {
@@ -136,7 +128,7 @@ class _GuestProfile extends ConsumerWidget {
                 }
               }
             },
-            child: Text(isRegister ? 'Crear' : 'Entrar'),
+            child: Text(isRegister ? s.create : s.enter),
           ),
         ],
       ),
@@ -145,10 +137,8 @@ class _GuestProfile extends ConsumerWidget {
 }
 
 class _UserProfile extends ConsumerStatefulWidget {
-  const _UserProfile({required this.user, required this.lang});
+  const _UserProfile({required this.user});
   final User user;
-  final AppLang lang;
-
   @override
   ConsumerState<_UserProfile> createState() => _UserProfileState();
 }
@@ -159,7 +149,6 @@ class _UserProfileState extends ConsumerState<_UserProfile> {
   @override
   void initState() {
     super.initState();
-    // Creamos/actualizamos doc mínimo en /users/{uid} sin depender de Storage ni foto.
     if (!_ensured.contains(widget.user.uid)) {
       _ensured.add(widget.user.uid);
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -169,7 +158,7 @@ class _UserProfileState extends ConsumerState<_UserProfile> {
           'email': u.email ?? '',
           'providerIds': u.providerData.map((p) => p.providerId).toList(),
           'updatedAt': FieldValue.serverTimestamp(),
-          'createdAt': FieldValue.serverTimestamp(), // merge no lo pisa si ya existe
+          'createdAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       });
     }
@@ -177,15 +166,17 @@ class _UserProfileState extends ConsumerState<_UserProfile> {
 
   @override
   Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
     final auth = ref.read(authServiceProvider);
-    // Avatar SIEMPRE local por inicial (no usamos photoURL para evitar dependencias/costos)
+    final isAdminAsync = ref.watch(userIsAdminProvider);
+
     final initial = (widget.user.displayName?.isNotEmpty == true
             ? widget.user.displayName!.trim()[0]
             : (widget.user.email?.isNotEmpty == true ? widget.user.email![0] : 'U'))
         .toUpperCase();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
+      appBar: AppBar(title: Text(s.profileTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -193,26 +184,23 @@ class _UserProfileState extends ConsumerState<_UserProfile> {
           Center(
             child: CircleAvatar(
               radius: 36,
-              child: Text(
-                initial,
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-              ),
+              child: Text(initial, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
             ),
           ),
           const SizedBox(height: 12),
           Center(
             child: Text(
-              widget.user.displayName?.isNotEmpty == true ? widget.user.displayName! : (widget.user.email ?? 'Usuario'),
+              widget.user.displayName?.isNotEmpty == true
+                  ? widget.user.displayName!
+                  : (widget.user.email ?? 'Usuario'),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(height: 6),
-          Center(
-            child: Text('UID: ${widget.user.uid}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ),
+          Center(child: Text('UID: ${widget.user.uid}', style: const TextStyle(fontSize: 12, color: Colors.grey))),
           const SizedBox(height: 24),
 
-          const Text('Idioma', style: TextStyle(fontWeight: FontWeight.w600)),
+          Text(s.language, style: const TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -225,12 +213,32 @@ class _UserProfileState extends ConsumerState<_UserProfile> {
           ),
 
           const SizedBox(height: 24),
+          isAdminAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (isAdmin) => isAdmin
+                ? Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: ListTile(
+                      leading: const Icon(Icons.verified_user),
+                      title: Text(s.adminUpload),
+                      subtitle: Text(s.adminPanel),
+                      trailing: const Icon(Icons.keyboard_arrow_right),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AdminUploadView()),
+                        );
+                      },
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
 
           FilledButton.tonal(
             onPressed: () async {
               await auth.signOut();
             },
-            child: const Text('Cerrar sesión'),
+            child: Text(s.logout),
           ),
         ],
       ),

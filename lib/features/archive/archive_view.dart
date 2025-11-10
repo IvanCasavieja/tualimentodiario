@@ -3,31 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/app_state.dart';                       // languageProvider, selectedFoodIdProvider
-import '../../core/models/daily_food.dart';               // DailyFood.fromDoc
-import '../../core/ui_utils.dart';                        // ellipsize
-import '../common/food_detail_dialog.dart';               // FoodDetailDialog
-import '../common/favorite_heart.dart';                   // ❤️
-import '../common/moods.dart';                            // moodsFilterProvider, moodBySlug
+import '../../core/app_state.dart'; // languageProvider, selectedFoodIdProvider
+import '../../core/i18n.dart';
+import '../../core/models/daily_food.dart';
+import '../../core/ui_utils.dart';
+import '../common/food_detail_dialog.dart';
+import '../common/favorite_heart.dart';
+import '../common/moods.dart';
 
 class ArchiveView extends ConsumerStatefulWidget {
   final String? initialFoodId;
   const ArchiveView({super.key, this.initialFoodId});
-
   @override
   ConsumerState<ArchiveView> createState() => _ArchiveViewState();
 }
 
 class _ArchiveViewState extends ConsumerState<ArchiveView> {
-  // --- Estilo compartido con Home ---
   static const _primary = Color(0xFF6C4DF5);
-  static const _accent  = Color(0xFF48C1F1);
+  static const _accent = Color(0xFF48C1F1);
 
-  // ---- Config
   static const int _pageSize = 10;
   static const int _pagerWindow = 5;
 
-  // ---- Query base
   Query<Map<String, dynamic>> _baseQuery() {
     return FirebaseFirestore.instance
         .collection('dailyFoods')
@@ -36,55 +33,39 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         .orderBy(FieldPath.documentId, descending: true);
   }
 
-  // ---- Estado de paginación
   int _totalCount = 0;
   int _totalPages = 0;
   int _currentPage = 1;
 
-  // Último doc de cada página visitada
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _pageCursors = [];
-
-  // Items visibles (página actual)
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _items = [];
 
-  // UI / carga
   bool _loading = false;
   String? _error;
   String? _rawError;
 
-  // Filtros por fecha (string 'yyyy-MM-dd')
   final _fromCtrl = TextEditingController();
   final _toCtrl = TextEditingController();
 
-  // Idioma
   String get _langCode => _toCode(ref.read(languageProvider));
 
-  // Listeners
-  ProviderSubscription<String?>? _selSub;           // abrir detalle por ID
-  ProviderSubscription<Set<String>>? _moodsSub;     // recargar al cambiar chips
+  ProviderSubscription<String?>? _selSub;
+  ProviderSubscription<Set<String>>? _moodsSub;
 
   @override
   void initState() {
     super.initState();
 
-    // Abrir detalle por ID (desde Home)
-    _selSub = ref.listenManual<String?>(
-      selectedFoodIdProvider,
-      (prev, next) {
-        if (next != null) {
-          _openById(next);
-          ref.read(selectedFoodIdProvider.notifier).state = null;
-        }
-      },
-    );
+    _selSub = ref.listenManual<String?>(selectedFoodIdProvider, (prev, next) {
+      if (next != null) {
+        _openById(next);
+        ref.read(selectedFoodIdProvider.notifier).state = null;
+      }
+    });
 
-    // Cambios en chips de ánimo -> recalcular lista (página 1)
-    _moodsSub = ref.listenManual<Set<String>>(
-      moodsFilterProvider,
-      (prev, next) => _applyFilter(),
-    );
+    _moodsSub =
+        ref.listenManual<Set<String>>(moodsFilterProvider, (prev, next) => _applyFilter());
 
-    // Si ya había un valor pendiente para abrir, procesarlo
     final pending = ref.read(selectedFoodIdProvider);
     if (pending != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -109,23 +90,18 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     super.dispose();
   }
 
-  // ----------------------- Data & Paginación -----------------------
-
   Query<Map<String, dynamic>> _filteredQuery() {
     var q = _baseQuery();
 
-    // Fechas
     final f = _fromCtrl.text.trim();
     final t = _toCtrl.text.trim();
     if (f.isNotEmpty) q = q.where('date', isGreaterThanOrEqualTo: f);
     if (t.isNotEmpty) q = q.where('date', isLessThanOrEqualTo: t);
 
-    // Ánimo (selección única)
     final moods = ref.read(moodsFilterProvider);
     if (moods.isNotEmpty) {
       q = q.where('moods', arrayContains: moods.first);
     }
-
     return q;
   }
 
@@ -154,14 +130,12 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       _items.clear();
       _setError(null, null);
     });
-
     try {
       if (targetPage < 1) targetPage = 1;
       if (targetPage > _totalPages) targetPage = _totalPages;
 
-      // Construir cursores hasta la página target (si no los tenemos)
       while (_pageCursors.length < targetPage - 1) {
-        final prevIdx = _pageCursors.length; // cursor de la página prevIdx+1
+        final prevIdx = _pageCursors.length;
         final prevCursor = prevIdx == 0 ? null : _pageCursors[prevIdx - 1];
         var q = _filteredQuery().limit(_pageSize);
         if (prevCursor != null) q = q.startAfterDocument(prevCursor);
@@ -170,18 +144,14 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         _pageCursors.add(snap.docs.last);
       }
 
-      // Obtener la página deseada
       final prevCursor = targetPage == 1 ? null : _pageCursors[targetPage - 2];
       var q = _filteredQuery().limit(_pageSize);
       if (prevCursor != null) q = q.startAfterDocument(prevCursor);
       final pageSnap = await q.get();
 
-      _items
-        ..clear()
-        ..addAll(pageSnap.docs);
+      _items..clear()..addAll(pageSnap.docs);
       _currentPage = targetPage;
 
-      // Guardar cursor de esta página si no lo teníamos
       if (_pageCursors.length < targetPage) {
         if (pageSnap.docs.isNotEmpty) {
           _pageCursors.add(pageSnap.docs.last);
@@ -202,18 +172,13 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     await _loadPage(1);
   }
 
-  // -------- abrir por ID (recorre páginas si hace falta) --------
   Future<void> _openById(String id) async {
-    // ¿Está en la página actual?
     final local = _items.indexWhere((d) => d.id == id);
     if (local >= 0) {
       _openDetail(_items[local]);
       return;
     }
-
     final start = _currentPage;
-
-    // Hacia adelante
     for (int p = start; p <= _totalPages; p++) {
       if (p != _currentPage) await _loadPage(p);
       final idx = _items.indexWhere((d) => d.id == id);
@@ -222,7 +187,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         return;
       }
     }
-    // Hacia atrás
     if (start != 1) {
       for (int p = 1; p < start; p++) {
         await _loadPage(p);
@@ -233,7 +197,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         }
       }
     }
-
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se encontró el alimento con los filtros actuales.')),
@@ -241,14 +204,16 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
-  // -------------------------- Helpers --------------------------
-
   static String _toCode(AppLang l) {
     switch (l) {
-      case AppLang.es: return 'es';
-      case AppLang.en: return 'en';
-      case AppLang.pt: return 'pt';
-      case AppLang.it: return 'it';
+      case AppLang.es:
+        return 'es';
+      case AppLang.en:
+        return 'en';
+      case AppLang.pt:
+        return 'pt';
+      case AppLang.it:
+        return 'it';
     }
   }
 
@@ -278,23 +243,14 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
-  DateTime? _tryParseYMD(String s) {
-    try {
-      return DateFormat('yyyy-MM-dd').parseStrict(s);
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<void> _pickDateFor(TextEditingController ctrl) async {
-    // Intentar usar la fecha existente, sino hoy.
     final initial = _tryParseYMD(ctrl.text) ?? DateTime.now();
     final first = DateTime(2000, 1, 1);
     final last = DateTime(2100, 12, 31);
-
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial.isBefore(first) || initial.isAfter(last) ? DateTime.now() : initial,
+      initialDate:
+          initial.isBefore(first) || initial.isAfter(last) ? DateTime.now() : initial,
       firstDate: first,
       lastDate: last,
       helpText: 'Seleccioná la fecha',
@@ -302,7 +258,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       confirmText: 'Aceptar',
       useRootNavigator: true,
       builder: (ctx, child) {
-        // Si querés forzar locale según app:
         return Localizations.override(
           context: ctx,
           locale: Locale(_langCode),
@@ -310,10 +265,17 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         );
       },
     );
-
     if (picked != null) {
       ctrl.text = DateFormat('yyyy-MM-dd').format(picked);
-      setState(() {}); // refrescar íconos de limpiar, etc.
+      setState(() {});
+    }
+  }
+
+  DateTime? _tryParseYMD(String s) {
+    try {
+      return DateFormat('yyyy-MM-dd').parseStrict(s);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -333,13 +295,11 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
   void _handleFirestoreError(Object e, {required String context}) {
     final msg = e.toString();
-    // Friendly mapping para el caso del índice en construcción
     if (msg.contains('FAILED_PRECONDITION') &&
         (msg.contains('requires an index') || msg.contains('index is currently building'))) {
       _setError(
-        'El filtro por estados de ánimo necesita un índice de Firestore y '
-        'ese índice todavía se está construyendo. Cuando quede listo, '
-        'los resultados aparecerán ordenados por fecha (10 por página).',
+        'El filtro por estados de ánimo necesita un índice de Firestore y ese índice '
+        'todavía se está construyendo. Cuando quede listo, los resultados aparecerán.',
         msg,
       );
     } else {
@@ -347,24 +307,17 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
-  void _clearMood() {
-    ref.read(moodsFilterProvider.notifier).state = {};
-    _applyFilter(); // quedarse en Archivo mostrando todo, página 1
-  }
-
-  // ------------------------------ BUILD ------------------------------
-
   @override
   Widget build(BuildContext context) {
-    // Rebuild si cambia idioma
     ref.watch(languageProvider);
-    // También rebuild si cambian los chips (para mostrar chip activo)
+    final s = ref.watch(stringsProvider);
+
     final selected = ref.watch(moodsFilterProvider);
     final activeSlug = selected.isEmpty ? null : selected.first;
     final activeMood = activeSlug == null ? null : moodBySlug(activeSlug);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Archivo')),
+      appBar: AppBar(title: Text(s.archiveTitle)),
       body: Column(
         children: [
           // Filtros
@@ -377,7 +330,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                     Expanded(
                       child: _DateField(
                         controller: _fromCtrl,
-                        label: 'Desde (yyyy-MM-dd)',
+                        label: s.filterFrom,
                         onPick: () => _pickDateFor(_fromCtrl),
                         onClear: () {
                           _fromCtrl.clear();
@@ -389,7 +342,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                     Expanded(
                       child: _DateField(
                         controller: _toCtrl,
-                        label: 'Hasta (yyyy-MM-dd)',
+                        label: s.filterTo,
                         onPick: () => _pickDateFor(_toCtrl),
                         onClear: () {
                           _toCtrl.clear();
@@ -401,12 +354,10 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                     FilledButton.icon(
                       onPressed: _loading ? null : _applyFilter,
                       icon: const Icon(Icons.filter_alt),
-                      label: const Text('Filtrar'),
+                      label: Text(s.filterBtn),
                     ),
                   ],
                 ),
-
-                // Chip activo con X para quitar (sin volver a Home)
                 if (activeMood != null) ...[
                   const SizedBox(height: 8),
                   Align(
@@ -420,7 +371,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      onDeleted: _clearMood,
+                      onDeleted: null, // sin limpiar desde acá
                       deleteIconColor: activeMood.color,
                       backgroundColor: activeMood.color.withOpacity(.12),
                       shape: StadiumBorder(
@@ -438,37 +389,36 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? _FriendlyError(message: _error!, raw: _rawError, onClearMood: _clearMood)
+                    ? _FriendlyError(message: _error!, raw: _rawError)
                     : _items.isEmpty
-                        ? const Center(child: Text('No hay resultados'))
+                        ? Center(child: Text(s.noResults))
                         : ListView.builder(
                             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                             itemCount: _items.length + 1,
                             itemBuilder: (ctx, i) {
                               if (i == _items.length) {
-                                // Paginador al final
                                 return _Paginator(
                                   current: _currentPage,
                                   total: _totalPages,
                                   window: _pagerWindow,
-                                  onPrev: _currentPage > 1 ? () => _loadPage(_currentPage - 1) : null,
+                                  onPrev:
+                                      _currentPage > 1 ? () => _loadPage(_currentPage - 1) : null,
                                   onNext: _currentPage < _totalPages
                                       ? () => _loadPage(_currentPage + 1)
                                       : null,
                                   onJump: (p) => _loadPage(p),
                                 );
                               }
-
                               final doc = _items[i];
                               final data = doc.data();
                               final translations =
                                   (data['translations'] as Map?)?.cast<String, dynamic>() ?? {};
-                              final t = _pickLangMap(translations, primary: _langCode, fallback: 'es');
+                              final t =
+                                  _pickLangMap(translations, primary: _langCode, fallback: 'es');
                               final verse = (t['verse'] as String?)?.trim() ?? '—';
                               final description = (t['description'] as String?)?.trim() ?? '';
                               final dateStr = (data['date'] as String?) ?? '';
 
-                              // ====== TARJETITA = misma estética que Home ======
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
@@ -494,7 +444,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Listón lateral
                                         Container(
                                           width: 6,
                                           height: 72,
@@ -504,7 +453,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                           ),
                                         ),
                                         const SizedBox(width: 12),
-                                        // Contenido
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,44 +514,29 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 }
 
 // ===================== UI auxiliares =====================
-
 class _FriendlyError extends StatelessWidget {
   final String message;
   final String? raw;
-  final VoidCallback onClearMood;
-  const _FriendlyError({required this.message, this.raw, required this.onClearMood});
-
+  const _FriendlyError({required this.message, this.raw});
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(message),
-          const SizedBox(height: 10),
-          FilledButton.icon(
-            onPressed: onClearMood,
-            icon: const Icon(Icons.clear_all),
-            label: const Text('Quitar filtro'),
-          ),
-          if (raw != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Text(
-                raw!,
-                style: const TextStyle(fontSize: 12, color: Colors.black87),
-              ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(message),
+        if (raw != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
             ),
-          ],
+            child: Text(raw!, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+          ),
         ],
-      ),
+      ]),
     );
   }
 }
@@ -613,7 +546,6 @@ class _DateField extends StatelessWidget {
   final String label;
   final VoidCallback onPick;
   final VoidCallback onClear;
-
   const _DateField({
     required this.controller,
     required this.label,
@@ -624,21 +556,16 @@ class _DateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasValue = controller.text.trim().isNotEmpty;
-
     return TextField(
       controller: controller,
-      readOnly: true, // abre el datepicker en vez del teclado
+      readOnly: true,
       decoration: InputDecoration(
         labelText: label,
         suffixIcon: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (hasValue)
-              IconButton(
-                tooltip: 'Limpiar',
-                icon: const Icon(Icons.clear),
-                onPressed: onClear,
-              ),
+              IconButton(tooltip: 'Limpiar', icon: const Icon(Icons.clear), onPressed: onClear),
             IconButton(
               tooltip: 'Seleccionar fecha',
               icon: const Icon(Icons.calendar_today),
@@ -657,7 +584,6 @@ class _DateChip extends StatelessWidget {
   final IconData icon;
   final Color color;
   const _DateChip({required this.text, required this.icon, required this.color});
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -667,20 +593,14 @@ class _DateChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: color.withOpacity(.25)),
       ),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: color.withOpacity(.9)),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              color: _darken(color),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+      child: Row(children: [
+        Icon(icon, size: 14, color: color.withOpacity(.9)),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: TextStyle(fontSize: 12, color: _darken(color), fontWeight: FontWeight.w600),
+        ),
+      ]),
     );
   }
 
@@ -690,16 +610,14 @@ class _DateChip extends StatelessWidget {
   }
 }
 
-// ===================== Paginador responsivo (ventana de 5) =====================
-
+// ===================== Paginador =====================
 class _Paginator extends StatelessWidget {
   final int current; // 1-based
   final int total;
-  final int window; // cantidad de botones visibles (p. ej., 5)
+  final int window; // cantidad de botones visibles
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
   final void Function(int page) onJump;
-
   const _Paginator({
     required this.current,
     required this.total,
@@ -712,7 +630,6 @@ class _Paginator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (total <= 1) return const SizedBox.shrink();
-
     final half = window ~/ 2;
     int start = (current - half).clamp(1, (total - window + 1).clamp(1, total));
     int end = (start + window - 1).clamp(1, total);
@@ -720,51 +637,34 @@ class _Paginator extends StatelessWidget {
       start = (end - window + 1).clamp(1, total);
     }
     final pages = List<int>.generate(end - start + 1, (i) => start + i);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              onPressed: onPrev,
-              icon: const Icon(Icons.chevron_left),
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              padding: EdgeInsets.zero,
-            ),
-            ...pages.map((p) {
-              final selected = p == current;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(36, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    side: BorderSide(
-                      color: selected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey.shade300,
-                    ),
-                    backgroundColor: selected
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                        : null,
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          IconButton(onPressed: onPrev, icon: const Icon(Icons.chevron_left), constraints: const BoxConstraints(minWidth: 36, minHeight: 36), padding: EdgeInsets.zero),
+          ...pages.map((p) {
+            final selected = p == current;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(36, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  side: BorderSide(
+                    color: selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
                   ),
-                  onPressed: () => onJump(p),
-                  child: Text('$p'),
+                  backgroundColor:
+                      selected ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : null,
                 ),
-              );
-            }),
-            IconButton(
-              onPressed: onNext,
-              icon: const Icon(Icons.chevron_right),
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              padding: EdgeInsets.zero,
-            ),
-          ],
-        ),
+                onPressed: () => onJump(p),
+                child: Text('$p'),
+              ),
+            );
+          }),
+          IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right), constraints: const BoxConstraints(minWidth: 36, minHeight: 36), padding: EdgeInsets.zero),
+        ]),
       ),
     );
   }

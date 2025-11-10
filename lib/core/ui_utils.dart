@@ -1,3 +1,5 @@
+import 'app_state.dart';
+
 String ellipsize(String s, [int max = 140]) {
   if (s.length <= max) return s;
   return '${s.substring(0, max).trimRight()}…';
@@ -12,7 +14,21 @@ String langFarewell(String code) {
     case 'it':
       return 'Giorno benedetto';
     case 'es':
-    default:
       return 'Bendecido día';
+  }
+  // No debería llegar acá
+  return 'Bendecido día';
+}
+
+String langCodeOf(AppLang l) {
+  switch (l) {
+    case AppLang.en:
+      return 'en';
+    case AppLang.pt:
+      return 'pt';
+    case AppLang.it:
+      return 'it';
+    case AppLang.es:
+      return 'es';
   }
 }

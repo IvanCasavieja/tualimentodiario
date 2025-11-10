@@ -4,10 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Idiomas soportados
 enum AppLang { es, en, pt, it }
 
-/// Proveedor simple del idioma actual
+/// Idioma actual de la app
 final languageProvider = StateProvider<AppLang>((ref) => AppLang.es);
 
-/// Navegación bottom (0: Inicio, 1: Archivo, 2: Favoritos, 3: Perfil)
+/// Bottom nav (0: Inicio, 1: Archivo, 2: Favoritos, 3: Perfil)
 final bottomTabIndexProvider = StateProvider<int>((ref) => 0);
 
 /// Cuando el usuario toca una tarjeta en Inicio, guardamos el ID para que
