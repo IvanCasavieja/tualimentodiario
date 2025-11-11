@@ -1,7 +1,11 @@
 ﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../core/app_state.dart'; // languageProvider, selectedFoodIdProvider
 import '../../core/models/daily_food.dart';
@@ -10,6 +14,9 @@ import '../../core/i18n.dart'; // stringsProvider
 import '../common/food_detail_dialog.dart';
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
+
+/// Reemplazá por el link real de Play Store o por un Dynamic Link
+const String kInstallUrl = 'https://example.com/tu_alimento_diario';
 
 class ArchiveView extends ConsumerStatefulWidget {
   final String? initialFoodId;
@@ -26,17 +33,10 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   static const int _pageSize = 10;
   static const int _pagerWindow = 5;
 
-  Query<Map<String, dynamic>> _baseQuery() {
-    return FirebaseFirestore.instance
-        .collection('dailyFoods')
-        .where('isPublished', isEqualTo: true)
-        .orderBy('date', descending: true)
-        .orderBy(FieldPath.documentId, descending: true);
-  }
-
   int _totalCount = 0;
   int _totalPages = 0;
   int _currentPage = 1;
+
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _pageCursors = [];
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _items = [];
 
@@ -51,6 +51,14 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
   ProviderSubscription<String?>? _selSub;
   ProviderSubscription<Set<String>>? _moodsSub;
+
+  Query<Map<String, dynamic>> _baseQuery() {
+    return FirebaseFirestore.instance
+        .collection('dailyFoods')
+        .where('isPublished', isEqualTo: true)
+        .orderBy('date', descending: true)
+        .orderBy(FieldPath.documentId, descending: true);
+  }
 
   @override
   void initState() {
@@ -167,7 +175,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         }
       }
     } catch (e) {
-      _handleFirestoreError(e, context: 'cargando pÃ¡gina');
+      _handleFirestoreError(e, context: 'cargando página');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -209,7 +217,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se encontrÃ³ el alimento con los filtros actuales.')),
+        const SnackBar(content: Text('No se encontró el alimento con los filtros actuales.')),
       );
     }
   }
@@ -273,7 +281,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
           : initial,
       firstDate: first,
       lastDate: last,
-      helpText: 'SeleccionÃ¡ la fecha',
+      helpText: 'Seleccioná la fecha',
       cancelText: 'Cancelar',
       confirmText: 'Aceptar',
       useRootNavigator: true,
@@ -300,6 +308,129 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     );
   }
 
+  // ================= COMPARTIR =================
+
+  String _buildShareText({
+    required String verse,
+    required String description,
+    required String dateStr,
+  }) {
+    final datePretty = _formatDate(dateStr);
+    final headerByLang = {
+      'es': 'Alimento Diario $datePretty',
+      'en': 'Daily Food $datePretty',
+      'pt': 'Alimento Diário $datePretty',
+      'it': 'Cibo Quotidiano $datePretty',
+    };
+    final header = headerByLang[_langCode] ?? 'Alimento Diario $datePretty';
+
+    final parts = <String>[
+      header,
+      verse.trim().isEmpty ? '—' : verse.trim(),
+      if (description.trim().isNotEmpty) description.trim(),
+      'Descargá la app: $kInstallUrl',
+    ];
+    return parts.where((s) => s.isNotEmpty).join('\n\n');
+  }
+
+  Future<void> _shareToWhatsApp(String text) async {
+    final uri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(text)}');
+    try {
+      final ok = await canLaunchUrl(uri);
+      if (ok) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await Share.share(text); // fallback
+      }
+    } catch (_) {
+      await Share.share(text); // fallback
+    }
+  }
+
+  Future<void> _shareGeneric(String text) async {
+    await Share.share(text);
+  }
+
+  void _openShareSheet({
+    required BuildContext context,
+    required String verse,
+    required String description,
+    required String dateStr,
+  }) {
+    final text = _buildShareText(
+      verse: verse,
+      description: description,
+      dateStr: dateStr,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const FaIcon(FontAwesomeIcons.whatsapp, color: Color(0xFF25D366)),
+                title: const Text('Compartir por WhatsApp'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _shareToWhatsApp(text);
+                },
+              ),
+              ListTile(
+                leading: const FaIcon(FontAwesomeIcons.instagram, color: Color(0xFFE1306C)),
+                title: const Text('Compartir en Instagram'),
+                subtitle: const Text('Usa el menú del sistema (texto)'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _shareGeneric(text);
+                },
+              ),
+              ListTile(
+                leading: const FaIcon(FontAwesomeIcons.facebook, color: Color(0xFF1877F2)),
+                title: const Text('Compartir en Facebook'),
+                subtitle: const Text('Usa el menú del sistema (texto)'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _shareGeneric(text);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.ios_share),
+                title: const Text('Más opciones'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _shareGeneric(text);
+                },
+              ),
+              const SizedBox(height: 6),
+              TextButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: text));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Texto copiado al portapapeles')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.copy),
+                label: const Text('Copiar texto'),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ============================================
+
   void _setError(String? userMessage, String? raw) {
     _error = userMessage;
     _rawError = raw;
@@ -311,9 +442,9 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         (msg.contains('requires an index') ||
             msg.contains('index is currently building'))) {
       _setError(
-        'El filtro por estados de Ã¡nimo necesita un Ã­ndice de Firestore y '
-        'ese Ã­ndice todavÃ­a se estÃ¡ construyendo. Cuando quede listo, '
-        'los resultados aparecerÃ¡n ordenados por fecha (10 por pÃ¡gina).',
+        'El filtro por estados de ánimo necesita un índice de Firestore y '
+        'ese índice todavía se está construyendo. Cuando quede listo, '
+        'los resultados aparecerán ordenados por fecha (10 por página).',
         msg,
       );
     } else {
@@ -328,7 +459,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
   @override
   Widget build(BuildContext context) {
-    // i18n
     final t = ref.watch(stringsProvider);
 
     // Rebuild si cambia idioma y/moods
@@ -384,14 +514,12 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: InputChip(
-                      avatar:
-                          Icon(activeMood.icon, size: 16, color: activeMood.color),
+                      avatar: Icon(activeMood.icon, size: 16, color: activeMood.color),
                       label: Text(
                         activeMood.label,
                         style: TextStyle(
                           color: activeMood.color.withValues(alpha: .95),
-                          fontWeight: FontWeight.w600,
-                        ),
+                          fontWeight: FontWeight.w600),
                       ),
                       onDeleted: _clearMood,
                       deleteIconColor: activeMood.color,
@@ -421,8 +549,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                     : _items.isEmpty
                         ? Center(child: Text(t.noResults))
                         : ListView.builder(
-                            padding:
-                                const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                             itemCount: _items.length + 1,
                             itemBuilder: (ctx, i) {
                               if (i == _items.length) {
@@ -442,36 +569,29 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
                               final doc = _items[i];
                               final data = doc.data();
-                              final translations = (data['translations'] as Map?)
-                                      ?.cast<String, dynamic>() ??
-                                  {};
+                              final translations =
+                                  (data['translations'] as Map?)?.cast<String, dynamic>() ?? {};
                               final tmap = _pickLangMap(
                                 translations,
                                 primary: _langCode,
                                 fallback: 'es',
                               );
-                              final verse =
-                                  (tmap['verse'] as String?)?.trim() ?? 'â€”';
-                              final description =
-                                  (tmap['description'] as String?)?.trim() ?? '';
+                              final verse = (tmap['verse'] as String?)?.trim() ?? '—';
+                              final description = (tmap['description'] as String?)?.trim() ?? '';
                               final dateStr = (data['date'] as String?) ?? '';
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white,
-                                      Colors.white.withValues(alpha: .965)
-                                    ],
+                                    colors: [Colors.white, Colors.white.withValues(alpha: .965)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color:
-                                          Colors.black12.withValues(alpha: .06),
+                                      color: Colors.black12.withValues(alpha: .06),
                                       blurRadius: 14,
                                       offset: const Offset(0, 6),
                                     ),
@@ -481,26 +601,22 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                   borderRadius: BorderRadius.circular(20),
                                   onTap: () => _openDetail(doc),
                                   child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        14, 14, 14, 12),
+                                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
                                     child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Container(
                                           width: 6,
                                           height: 72,
                                           decoration: BoxDecoration(
                                             color: _primary,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(8),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 verse,
@@ -513,36 +629,39 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                               Text(
                                                 ellipsize(description, 130),
                                                 style: TextStyle(
-                                                  color: Colors.black
-                                                      .withValues(alpha: .75),
+                                                  color: Colors.black.withValues(alpha: .75),
                                                 ),
                                               ),
                                               const SizedBox(height: 10),
                                               Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
                                                   _DateChip(
-                                                    text:
-                                                        _formatDate(dateStr),
+                                                    text: _formatDate(dateStr),
                                                     icon: Icons.event,
                                                     color: _accent,
                                                   ),
                                                   Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
+                                                    mainAxisSize: MainAxisSize.min,
                                                     children: [
-                                                      FavoriteHeart(
-                                                          foodId: doc.id,
-                                                          iconSize: 22),
+                                                      FavoriteHeart(foodId: doc.id, iconSize: 22),
                                                       const SizedBox(width: 4),
                                                       IconButton(
-                                                        icon: const Icon(
-                                                            Icons.open_in_new),
+                                                        icon: const Icon(Icons.ios_share),
+                                                        tooltip: 'Compartir',
+                                                        onPressed: () {
+                                                          _openShareSheet(
+                                                            context: context,
+                                                            verse: verse,
+                                                            description: description,
+                                                            dateStr: dateStr,
+                                                          );
+                                                        },
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(Icons.open_in_new),
                                                         tooltip: 'Abrir',
-                                                        onPressed: () =>
-                                                            _openDetail(doc),
+                                                        onPressed: () => _openDetail(doc),
                                                       ),
                                                     ],
                                                   ),
@@ -569,8 +688,7 @@ class _FriendlyError extends StatelessWidget {
   final String message;
   final String? raw;
   final VoidCallback onClearMood;
-  const _FriendlyError(
-      {required this.message, this.raw, required this.onClearMood});
+  const _FriendlyError({required this.message, this.raw, required this.onClearMood});
 
   @override
   Widget build(BuildContext context) {
@@ -658,8 +776,7 @@ class _DateChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .12),
         borderRadius: BorderRadius.circular(30),
@@ -709,8 +826,7 @@ class _Paginator extends StatelessWidget {
   Widget build(BuildContext context) {
     if (total <= 1) return const SizedBox.shrink();
     final half = window ~/ 2;
-    int start =
-        (current - half).clamp(1, (total - window + 1).clamp(1, total));
+    int start = (current - half).clamp(1, (total - window + 1).clamp(1, total));
     int end = (start + window - 1).clamp(1, total);
     if (end - start + 1 < window && start > 1) {
       start = (end - window + 1).clamp(1, total);
@@ -738,19 +854,14 @@ class _Paginator extends StatelessWidget {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(36, 36),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     side: BorderSide(
                       color: selected
                           ? Theme.of(context).colorScheme.primary
                           : Colors.grey.shade300,
                     ),
-                    backgroundColor: selected
-                        ? Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.1)
-                        : null,
+                    backgroundColor:
+                        selected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : null,
                   ),
                   onPressed: () => onJump(p),
                   child: Text('$p'),
@@ -769,4 +880,3 @@ class _Paginator extends StatelessWidget {
     );
   }
 }
-

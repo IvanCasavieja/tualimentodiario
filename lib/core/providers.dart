@@ -7,6 +7,15 @@ import '../features/auth/auth_service.dart';
 import 'firestore_repository.dart'; // FS
 
 /// ---------------------------------------------------------------------------
+/// 🔐 UIDs con rol de administrador (mantener en un solo lugar)
+///   ➜ Debe coincidir con la función `isAdmin()` de tus Firestore Rules
+/// ---------------------------------------------------------------------------
+const Set<String> kAdminUids = {
+  "Hw70VMXycgXgLKow2EIAjFU9h8p1", // Iván
+  "8Z5t5CqqO9XLqSWhzNI0AnMjkPF2", // Maxi
+};
+
+/// ---------------------------------------------------------------------------
 /// ✅ AUTH STATE (anónimo o logueado)
 /// ---------------------------------------------------------------------------
 final authStateProvider = StreamProvider<User?>(
@@ -61,31 +70,19 @@ final isFavoriteProvider =
 );
 
 /// ---------------------------------------------------------------------------
-/// ✅ ¿ES ADMIN? -> existe admins/{uid}
-///   Requiere en rules: match /admins/{uid} { allow get: if request.auth.uid == uid; }
+/// ✅ ¿ES ADMIN?
+///   ✔️ Nueva lógica: compara el UID actual con `kAdminUids`
+///   ❌ Ya no consulta `admins/{uid}` en Firestore
 /// ---------------------------------------------------------------------------
 final userIsAdminProvider = StreamProvider<bool>(
   name: 'userIsAdminProvider',
-  (ref) async* {
-    await for (final user in FirebaseAuth.instance.authStateChanges()) {
-      if (user == null) {
-        if (kDebugMode) debugPrint('[admin] user=null -> false');
-        yield false;
-      } else {
-        final path = 'admins/${user.uid}';
-        if (kDebugMode) debugPrint('[admin] listening $path');
-        yield* FirebaseFirestore.instance
-            .doc(path)
-            .snapshots()
-            .map((d) {
-              final ok = d.exists;
-              if (kDebugMode) debugPrint('[admin] $path exists=${d.exists} data=${d.data()}');
-              return ok;
-            })
-            .handleError((e) {
-              if (kDebugMode) debugPrint('[admin] ERROR leyendo $path -> $e');
-            });
+  (ref) {
+    return FirebaseAuth.instance.authStateChanges().map((user) {
+      final isAdmin = user != null && kAdminUids.contains(user.uid);
+      if (kDebugMode) {
+        debugPrint('[admin] uid=${user?.uid} -> isAdmin=$isAdmin');
       }
-    }
+      return isAdmin;
+    });
   },
 );

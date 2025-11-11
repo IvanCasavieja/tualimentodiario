@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 
 import '../../core/providers.dart'; // userIsAdminProvider
 import '../../core/app_state.dart'; // languageProvider
-import '../../core/moods_i18n.dart' show moodLabelI18n; // <-- usar la misma traducción que Home
+import '../../core/moods_i18n.dart'
+    show moodLabelI18n; // <-- usar la misma traducción que Home
 import '../common/moods.dart' show kMoods; // lista de moods (slug, icon, color)
 
 class AdminUploadView extends ConsumerStatefulWidget {
@@ -35,7 +36,10 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     'it': 'Giorno benedetto',
   };
 
-  late final TabController _tabs = TabController(length: langs.length, vsync: this);
+  late final TabController _tabs = TabController(
+    length: langs.length,
+    vsync: this,
+  );
 
   /// Publicamos directo (sin switch)
   final bool _isPublished = true;
@@ -48,13 +52,13 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
 
   // Campos por idioma
   final Map<String, TextEditingController> _verse = {
-    for (final l in langs) l: TextEditingController()
+    for (final l in langs) l: TextEditingController(),
   };
   final Map<String, List<TextEditingController>> _paragraphs = {
-    for (final l in langs) l: [TextEditingController()]
+    for (final l in langs) l: [TextEditingController()],
   };
   final Map<String, TextEditingController> _prayer = {
-    for (final l in langs) l: TextEditingController()
+    for (final l in langs) l: TextEditingController(),
   };
 
   @override
@@ -128,12 +132,14 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheet) {
-            final currentLang = ref.read(languageProvider).name; // 'es'|'en'|'pt'|'it'
+            final currentLang = ref
+                .read(languageProvider)
+                .name; // 'es'|'en'|'pt'|'it'
             String labelFor(String slug, String fallback) => moodLabelI18n(
-                  slug: slug,
-                  langCode: currentLang,
-                  fallbackLabel: fallback,
-                );
+              slug: slug,
+              langCode: currentLang,
+              fallbackLabel: fallback,
+            );
 
             return SafeArea(
               child: Padding(
@@ -167,8 +173,11 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                             title: Text(labelFor(m.slug, m.label)),
                             trailing: sel
                                 ? const Icon(Icons.check_circle, size: 20)
-                                : const Icon(Icons.radio_button_unchecked,
-                                    size: 20, color: Colors.grey),
+                                : const Icon(
+                                    Icons.radio_button_unchecked,
+                                    size: 20,
+                                    color: Colors.grey,
+                                  ),
                             onTap: () {
                               setSheet(() {
                                 if (sel) {
@@ -202,7 +211,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                           child: const Text('Listo'),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -216,7 +225,17 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   Future<void> _submit() async {
     final isAdmin = ref.read(userIsAdminProvider).value ?? false;
     final user = FirebaseAuth.instance.currentUser;
+
+    print('---------------------------');
+    print('🔍 Intentando publicar alimento diario');
+    print('isAdmin (cliente): $isAdmin');
+    print('UID actual: ${user?.uid}');
+    print('Email: ${user?.email}');
+    print('DisplayName: ${user?.displayName}');
+    print('---------------------------');
+
     if (!isAdmin || user == null) {
+      print('⛔ Bloqueado localmente: no tenés permisos para publicar.');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No tenés permisos para publicar.')),
       );
@@ -227,6 +246,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     for (final l in langs) {
       if (!_isLangValid(l)) {
         _tabs.index = langs.indexOf(l);
+        print('⚠️ Falta completar idioma: $l');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falta completar ${langLabels[l]}')),
         );
@@ -234,7 +254,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       }
     }
 
-    // Construir translations
+    // Construir traducciones
     final Map<String, dynamic> translations = {};
     for (final l in langs) {
       final verse = _verse[l]!.text.trim();
@@ -253,40 +273,46 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       };
     }
 
-    // IMPORTANTE: guardar moods como SLUGS EN ESPAÑOL (no traducidos)
     final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    try {
-      await FirebaseFirestore.instance.collection('dailyFoods').add({
-        'date': dateStr,
-        'authorUid': user.uid,
-        'authorName': user.displayName ?? (user.email ?? 'Admin'),
-        'isPublished': _isPublished,
-        if (_selectedMoods.isNotEmpty) 'moods': _selectedMoods.toList(),
-        'stats': {'favoritesCount': 0},
-        'translations': translations,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    final dataToSend = {
+      'date': dateStr,
+      'authorUid': user.uid,
+      'authorName': user.displayName ?? (user.email ?? 'Admin'),
+      'isPublished': _isPublished,
+      if (_selectedMoods.isNotEmpty) 'moods': _selectedMoods.toList(),
+      'stats': {'favoritesCount': 0},
+      'translations': translations,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
 
+    print('📤 Datos que se enviarán a Firestore:');
+    print(dataToSend);
+    print('---------------------------');
+
+    try {
+      await FirebaseFirestore.instance.collection('dailyFoods').add(dataToSend);
+      print('✅ Documento enviado correctamente');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Alimento publicado')),
+          const SnackBar(content: Text('Alimento publicado correctamente')),
         );
         Navigator.of(context).maybePop();
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al publicar: $e')),
-        );
-      }
+      print('🔥 ERROR al publicar en Firestore: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al publicar: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isAdminAsync = ref.watch(userIsAdminProvider);
-    final currentLang = ref.watch(languageProvider).name; // por si lo necesitás en UI
+    final currentLang = ref
+        .watch(languageProvider)
+        .name; // por si lo necesitás en UI
 
     return Scaffold(
       appBar: AppBar(title: const Text('Subir alimento diario')),
@@ -302,10 +328,10 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
           final completedCount = _completed.length;
 
           String moodLabel(String slug, String fallback) => moodLabelI18n(
-                slug: slug,
-                langCode: currentLang,
-                fallbackLabel: fallback,
-              );
+            slug: slug,
+            langCode: currentLang,
+            fallbackLabel: fallback,
+          );
 
           return Column(
             children: [
@@ -332,19 +358,18 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                         : Wrap(
                             spacing: 8,
                             runSpacing: -6,
-                            children: _selectedMoods
-                                .map((slug) {
-                                  final base =
-                                      kMoods.firstWhere((m) => m.slug == slug);
-                                  final label = moodLabel(slug, base.label);
-                                  return Chip(
-                                    label: Text(label),
-                                    onDeleted: () => setState(() {
-                                      _selectedMoods.remove(slug);
-                                    }),
-                                  );
-                                })
-                                .toList(),
+                            children: _selectedMoods.map((slug) {
+                              final base = kMoods.firstWhere(
+                                (m) => m.slug == slug,
+                              );
+                              final label = moodLabel(slug, base.label);
+                              return Chip(
+                                label: Text(label),
+                                onDeleted: () => setState(() {
+                                  _selectedMoods.remove(slug);
+                                }),
+                              );
+                            }).toList(),
                           ),
                   ),
                 ),
@@ -399,8 +424,9 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                         ),
                       ),
                       FilledButton.icon(
-                        onPressed:
-                            completedCount == langs.length ? _submit : null,
+                        onPressed: completedCount == langs.length
+                            ? _submit
+                            : null,
                         icon: const Icon(Icons.cloud_upload),
                         label: const Text('Publicar'),
                       ),
@@ -444,10 +470,12 @@ class _LangForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badge = isCompleted
-        ? Row(children: const [
-            SizedBox(width: 6),
-            Icon(Icons.verified, size: 16, color: Colors.green)
-          ])
+        ? Row(
+            children: const [
+              SizedBox(width: 6),
+              Icon(Icons.verified, size: 16, color: Colors.green),
+            ],
+          )
         : const SizedBox.shrink();
 
     return ListView(
@@ -493,10 +521,12 @@ class _LangForm extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  tooltip:
-                      paragraphs.length > 1 ? 'Eliminar' : 'No se puede eliminar',
-                  onPressed:
-                      paragraphs.length > 1 ? () => onRemoveParagraph(i) : null,
+                  tooltip: paragraphs.length > 1
+                      ? 'Eliminar'
+                      : 'No se puede eliminar',
+                  onPressed: paragraphs.length > 1
+                      ? () => onRemoveParagraph(i)
+                      : null,
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
               ],
@@ -557,4 +587,3 @@ class _LangForm extends StatelessWidget {
     return lang;
   }
 }
-
