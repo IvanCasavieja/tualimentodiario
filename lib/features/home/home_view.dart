@@ -104,7 +104,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
               }
               final docs = snap.data?.docs ?? [];
               if (docs.isEmpty) {
-                return const Center(child: Text('No hay alimentos aÃºn.'));
+                return const Center(child: Text('No hay alimentos diarios.'));
               }
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -131,9 +131,10 @@ class _HomeViewState extends ConsumerState<HomeView> {
                       primary: langCode,
                       fallback: 'es',
                     );
-                    final verse = (tr['verse'] as String?)?.trim() ?? 'â€”';
-                    final description =
-                        (tr['description'] as String?)?.trim() ?? 'â€”';
+                    // Defaults con em-dash correcto (—)
+                    final verse = (tr['verse'] as String?)?.trim().trimRight() ?? '—';
+                    final description = (tr['description'] as String?)?.trim().trimRight() ?? '—';
+
                     return _FoodCard(
                       id: id,
                       verse: verse,
@@ -303,8 +304,6 @@ class _FoodCard extends StatelessWidget {
     required this.onOpen,
   });
 
-  String _short(String t) => t.length > 130 ? '${t.substring(0, 130)}â€¦' : t;
-
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('dd/MM/yyyy').format(date);
@@ -312,9 +311,10 @@ class _FoodCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-            colors: [Colors.white, Colors.white.withValues(alpha: .96)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight),
+          colors: [Colors.white, Colors.white.withValues(alpha: .96)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(color: Colors.black12.withValues(alpha: .06), blurRadius: 14, offset: const Offset(0, 6))
@@ -330,9 +330,21 @@ class _FoodCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(verse, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                // Verso: 1 línea + …
+                Text(
+                  verse,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 6),
-                Text(_short(description), style: TextStyle(color: Colors.black.withValues(alpha: .75))),
+                // Descripción: 3 líneas + …
+                Text(
+                  description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.black.withValues(alpha: .75)),
+                ),
                 const SizedBox(height: 10),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   _DateChip(text: formattedDate, icon: Icons.event, color: accent),
@@ -369,8 +381,10 @@ class _DateChip extends StatelessWidget {
       child: Row(children: [
         Icon(icon, size: 14, color: color.withValues(alpha: .9)),
         const SizedBox(width: 6),
-        Text(text,
-            style: TextStyle(fontSize: 12, color: _darken(color), fontWeight: FontWeight.w600)),
+        Text(
+          text,
+          style: TextStyle(fontSize: 12, color: _darken(color), fontWeight: FontWeight.w600),
+        ),
       ]),
     );
   }
@@ -380,4 +394,3 @@ class _DateChip extends StatelessWidget {
     return h.withLightness((h.lightness - a).clamp(0.0, 1.0)).toColor();
   }
 }
-

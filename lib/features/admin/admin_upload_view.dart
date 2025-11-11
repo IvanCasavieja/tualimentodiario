@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/providers.dart'; // userIsAdminProvider
 import '../../core/app_state.dart'; // languageProvider
-import '../../core/moods_i18n.dart' show moodLabelI18n; // <-- usar la misma traducciÃ³n que Home
+import '../../core/moods_i18n.dart' show moodLabelI18n; // <-- usar la misma traducción que Home
 import '../common/moods.dart' show kMoods; // lista de moods (slug, icon, color)
 
 class AdminUploadView extends ConsumerStatefulWidget {
@@ -21,17 +21,17 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   // Idiomas / tabs
   static const langs = ['es', 'en', 'pt', 'it'];
   static const langLabels = {
-    'es': 'EspaÃ±ol',
+    'es': 'Español',
     'en': 'English',
-    'pt': 'PortuguÃªs',
+    'pt': 'Português',
     'it': 'Italiano',
   };
 
   // Despedidas fijas
   static const Map<String, String> kFarewells = {
-    'es': 'Bendecido DÃ­a',
+    'es': 'Bendecido Día',
     'en': 'Blessed day',
-    'pt': 'Dia abenÃ§oado',
+    'pt': 'Dia abençoado',
     'it': 'Giorno benedetto',
   };
 
@@ -40,7 +40,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   /// Publicamos directo (sin switch)
   final bool _isPublished = true;
 
-  /// SelecciÃ³n de moods (mÃ¡x 3) â€“ GUARDAREMOS SLUGS EN ESPAÃ‘OL
+  /// Selección de moods (máx. 3) – GUARDAREMOS SLUGS EN ESPAÑOL
   final Set<String> _selectedMoods = {};
 
   /// Pasos completados (por idioma)
@@ -79,7 +79,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   }
 
   void _removeParagraph(String lang, int idx) {
-    if (_paragraphs[lang]!.length <= 1) { return; }
+    if (_paragraphs[lang]!.length <= 1) return;
     final c = _paragraphs[lang]!.removeAt(idx);
     c.dispose();
     setState(() => _completed.remove(lang)); // si edita, invalidamos el paso
@@ -105,14 +105,16 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     if (_isLangValid(lang)) {
       setState(() => _completed.add(lang));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Paso ${langLabels[lang]} completado âœ”ï¸')),
+        SnackBar(content: Text('Paso ${langLabels[lang]} completado ✓')),
       );
     } else {
       _tabs.index = langs.indexOf(lang);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(
-                'CompletÃ¡ VersÃ­culo, al menos 1 pÃ¡rrafo y la OraciÃ³n en ${langLabels[lang]}')),
+          content: Text(
+            'Completá Versículo, al menos 1 párrafo y la Oración en ${langLabels[lang]}',
+          ),
+        ),
       );
     }
   }
@@ -141,11 +143,15 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                   children: [
                     Row(
                       children: [
-                        const Text('SeleccionÃ¡ hasta 3 moods',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
+                        const Text(
+                          'Seleccioná hasta 3 moods',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                         const Spacer(),
-                        Text('(${temp.length}/3)',
-                            style: const TextStyle(color: Colors.grey)),
+                        Text(
+                          '(${temp.length}/3)',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -168,7 +174,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                                 if (sel) {
                                   temp.remove(m.slug);
                                 } else {
-                                  if (temp.length < 3) { temp.add(m.slug); }
+                                  if (temp.length < 3) temp.add(m.slug);
                                 }
                               });
                             },
@@ -180,8 +186,9 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                     Row(
                       children: [
                         TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Cancelar')),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancelar'),
+                        ),
                         const Spacer(),
                         FilledButton(
                           onPressed: () {
@@ -211,7 +218,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     final user = FirebaseAuth.instance.currentUser;
     if (!isAdmin || user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No tenÃ©s permisos para publicar.')),
+        const SnackBar(content: Text('No tenés permisos para publicar.')),
       );
       return;
     }
@@ -246,7 +253,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       };
     }
 
-    // IMPORTANTE: guardar moods como SLUGS EN ESPAÃ‘OL (no traducidos)
+    // IMPORTANTE: guardar moods como SLUGS EN ESPAÑOL (no traducidos)
     final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     try {
       await FirebaseFirestore.instance.collection('dailyFoods').add({
@@ -279,7 +286,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   @override
   Widget build(BuildContext context) {
     final isAdminAsync = ref.watch(userIsAdminProvider);
-    final currentLang = ref.watch(languageProvider).name; // por si lo necesitÃ¡s en UI
+    final currentLang = ref.watch(languageProvider).name; // por si lo necesitás en UI
 
     return Scaffold(
       appBar: AppBar(title: const Text('Subir alimento diario')),
@@ -289,7 +296,8 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
         data: (isAdmin) {
           if (!isAdmin) {
             return const Center(
-                child: Text('No tenÃ©s permisos para acceder a este panel.'));
+              child: Text('No tenés permisos para acceder a este panel.'),
+            );
           }
           final completedCount = _completed.length;
 
@@ -309,16 +317,18 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                   onTap: _openMoodSelector,
                   child: InputDecorator(
                     decoration: InputDecoration(
-                      labelText: 'Moods (mÃ¡x 3)',
+                      labelText: 'Moods (máx. 3)',
                       border: const OutlineInputBorder(),
                       suffixIcon: Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: Text('(${_selectedMoods.length}/3)',
-                            style: const TextStyle(color: Colors.grey)),
+                        child: Text(
+                          '(${_selectedMoods.length}/3)',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                       ),
                     ),
                     child: _selectedMoods.isEmpty
-                        ? const Text('TocÃ¡ para seleccionar')
+                        ? const Text('Tocá para seleccionar')
                         : Wrap(
                             spacing: 8,
                             runSpacing: -6,
@@ -445,24 +455,28 @@ class _LangForm extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Paso: ${_title(lang)}',
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              'Paso: ${_title(lang)}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(width: 6),
             badge,
           ],
         ),
         const SizedBox(height: 12),
 
-        // VersÃ­culo
+        // Versículo
         TextField(
           controller: verse,
           onChanged: (_) => onDirty(),
-          decoration: const InputDecoration(labelText: 'VersÃ­culo'),
+          decoration: const InputDecoration(labelText: 'Versículo'),
         ),
         const SizedBox(height: 12),
 
-        const Text('PÃ¡rrafos (DescripciÃ³n)',
-            style: TextStyle(fontWeight: FontWeight.w600)),
+        const Text(
+          'Párrafos (Descripción)',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         ...List.generate(paragraphs.length, (i) {
           return Padding(
@@ -474,8 +488,7 @@ class _LangForm extends StatelessWidget {
                     controller: paragraphs[i],
                     onChanged: (_) => onDirty(),
                     maxLines: null,
-                    decoration:
-                        InputDecoration(labelText: 'PÃ¡rrafo ${i + 1}'),
+                    decoration: InputDecoration(labelText: 'Párrafo ${i + 1}'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -495,18 +508,17 @@ class _LangForm extends StatelessWidget {
           child: TextButton.icon(
             onPressed: onAddParagraph,
             icon: const Icon(Icons.add),
-            label: const Text('Agregar pÃ¡rrafo'),
+            label: const Text('Agregar párrafo'),
           ),
         ),
         const SizedBox(height: 8),
 
-        // OraciÃ³n (obligatoria)
+        // Oración (obligatoria)
         TextField(
           controller: prayer,
           onChanged: (_) => onDirty(),
           maxLines: null,
-          decoration:
-              const InputDecoration(labelText: 'OraciÃ³n (obligatoria)'),
+          decoration: const InputDecoration(labelText: 'Oración (obligatoria)'),
         ),
         const SizedBox(height: 12),
 
@@ -518,7 +530,7 @@ class _LangForm extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // BotÃ³n completar paso
+        // Botón completar paso
         Align(
           alignment: Alignment.centerRight,
           child: FilledButton.icon(
@@ -534,15 +546,14 @@ class _LangForm extends StatelessWidget {
   String _title(String lang) {
     switch (lang) {
       case 'es':
-        return 'EspaÃ±ol';
+        return 'Español';
       case 'en':
         return 'English';
       case 'pt':
-        return 'PortuguÃªs';
+        return 'Português';
       case 'it':
         return 'Italiano';
     }
     return lang;
   }
 }
-
