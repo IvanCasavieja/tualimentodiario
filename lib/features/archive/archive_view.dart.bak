@@ -343,15 +343,15 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       if (ok) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        await SharePlus.instance.share(ShareParams(text: text)); // fallback
+        await SharePlus.instance.SharePlus.instance.share(text); // fallback
       }
     } catch (_) {
-      await SharePlus.instance.share(ShareParams(text: text)); // fallback
+      await SharePlus.instance.SharePlus.instance.share(text); // fallback
     }
   }
 
   Future<void> _shareGeneric(String text) async {
-    await SharePlus.instance.share(ShareParams(text: text));
+    await SharePlus.instance.SharePlus.instance.share(text);
   }
 
   void _openShareSheet({

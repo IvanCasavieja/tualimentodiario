@@ -2,16 +2,51 @@
 /// i18n centralizado para los labels de moods.
 /// Claves: slug -> { 'es'|'en'|'pt'|'it' : labelTraducido }
 const Map<String, Map<String, String>> kMoodI18n = {
-  'esperanza': {'es': 'Esperanza', 'en': 'Hope', 'pt': 'Esperança', 'it': 'Speranza'},
-  'gratitud': {'es': 'Gratitud', 'en': 'Gratitude', 'pt': 'Gratidão', 'it': 'Gratitudine'},
-  'fortaleza': {'es': 'Fortaleza', 'en': 'Strength', 'pt': 'Força', 'it': 'Fortezza'},
+  'esperanza': {
+    'es': 'Esperanza',
+    'en': 'Hope',
+    'pt': 'Esperança',
+    'it': 'Speranza',
+  },
+  'gratitud': {
+    'es': 'Gratitud',
+    'en': 'Gratitude',
+    'pt': 'Gratidão',
+    'it': 'Gratitudine',
+  },
+  'fortaleza': {
+    'es': 'Fortaleza',
+    'en': 'Strength',
+    'pt': 'Força',
+    'it': 'Fortezza',
+  },
   'paz': {'es': 'Paz', 'en': 'Peace', 'pt': 'Paz', 'it': 'Pace'},
   'alegria': {'es': 'Alegría', 'en': 'Joy', 'pt': 'Alegria', 'it': 'Gioia'},
-  'consuelo': {'es': 'Consuelo', 'en': 'Comfort', 'pt': 'Consolo', 'it': 'Conforto'},
-  'sabiduria': {'es': 'Sabiduría', 'en': 'Wisdom', 'pt': 'Sabedoria', 'it': 'Saggezza'},
+  'consuelo': {
+    'es': 'Consuelo',
+    'en': 'Comfort',
+    'pt': 'Consolo',
+    'it': 'Conforto',
+  },
+  'sabiduria': {
+    'es': 'Sabiduría',
+    'en': 'Wisdom',
+    'pt': 'Sabedoria',
+    'it': 'Saggezza',
+  },
   'fe': {'es': 'Fe', 'en': 'Faith', 'pt': 'Fé', 'it': 'Fede'},
-  'perdon': {'es': 'Perdón', 'en': 'Forgiveness', 'pt': 'Perdão', 'it': 'Perdono'},
-  'paciencia': {'es': 'Paciencia', 'en': 'Patience', 'pt': 'Paciência', 'it': 'Pazienza'},
+  'perdon': {
+    'es': 'Perdón',
+    'en': 'Forgiveness',
+    'pt': 'Perdão',
+    'it': 'Perdono',
+  },
+  'paciencia': {
+    'es': 'Paciencia',
+    'en': 'Patience',
+    'pt': 'Paciência',
+    'it': 'Pazienza',
+  },
 };
 
 /// Devuelve el label traducido para el slug dado.

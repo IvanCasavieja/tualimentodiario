@@ -5,8 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_state.dart'
-    show AppLang, languageProvider, selectedFoodIdProvider, bottomTabIndexProvider;
+    show
+        AppLang,
+        languageProvider,
+        selectedFoodIdProvider,
+        bottomTabIndexProvider;
 import '../../core/i18n.dart'; // stringsProvider
+import '../../core/tema.dart'; // AppExtras
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
 
@@ -18,21 +23,15 @@ class HomeView extends ConsumerStatefulWidget {
 }
 
 class _HomeViewState extends ConsumerState<HomeView> {
-  static const _bgGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFF6E9FF), Color(0xFFEAF7FF)],
-  );
-  static const _primary = Color(0xFF6C4DF5);
-  static const _accent = Color(0xFF48C1F1);
-
   ProviderSubscription<Set<String>>? _moodsSub;
 
   @override
   void initState() {
     super.initState();
-    _moodsSub =
-        ref.listenManual<Set<String>>(moodsFilterProvider, (prev, next) {
+    _moodsSub = ref.listenManual<Set<String>>(moodsFilterProvider, (
+      prev,
+      next,
+    ) {
       final had = (prev ?? {}).isNotEmpty;
       final has = next.isNotEmpty;
       if (has && (!had || (prev!.first != next.first))) {
@@ -81,17 +80,16 @@ class _HomeViewState extends ConsumerState<HomeView> {
     final t = ref.watch(stringsProvider);
     final langCode = _toCode(appLang);
 
+    final scheme = Theme.of(context).colorScheme;
+    final extras = Theme.of(context).extension<AppExtras>()!;
+    final text = Theme.of(context).textTheme; // ignore: unused_local_variable
+
     return Container(
-      decoration: const BoxDecoration(gradient: _bgGradient),
+      // fondo según tema (mantiene tu estilo en claro)
+      decoration: BoxDecoration(gradient: extras.homeBackground),
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.black87,
-          centerTitle: true,
-          title: Text(t.appTitle),
-        ),
+        appBar: AppBar(centerTitle: true, title: Text(t.appTitle)),
         body: SafeArea(
           child: StreamBuilder<QuerySnapshot>(
             stream: _latest5Query().snapshots(),
@@ -112,11 +110,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
                   _HeroHeader(
                     title: t.headerDailyFood,
                     subtitle: t.headerSubtitle,
-                    primary: _primary,
-                    accent: _accent,
                     onRandom: _openRandom,
                     randomLabel: t.headerSurprise,
-                    chips: const MoodChips(),
                   ),
                   const SizedBox(height: 12),
                   ...docs.map((d) {
@@ -124,28 +119,31 @@ class _HomeViewState extends ConsumerState<HomeView> {
                     final id = d.id;
                     final dt = _parseDate(data['date']);
                     final translations =
-                        (data['translations'] as Map?)?.cast<String, dynamic>() ??
-                            {};
+                        (data['translations'] as Map?)
+                            ?.cast<String, dynamic>() ??
+                        {};
                     final tr = _pickLangMap(
                       translations,
                       primary: langCode,
                       fallback: 'es',
                     );
-                    // Defaults con em-dash correcto (—)
-                    final verse = (tr['verse'] as String?)?.trim().trimRight() ?? '—';
-                    final description = (tr['description'] as String?)?.trim().trimRight() ?? '—';
+                    final verse =
+                        (tr['verse'] as String?)?.trim().trimRight() ?? '—';
+                    final description =
+                        (tr['description'] as String?)?.trim().trimRight() ??
+                        '—';
 
                     return _FoodCard(
                       id: id,
                       verse: verse,
                       description: description,
                       date: dt,
-                      primary: _primary,
-                      accent: _accent,
                       onOpen: () {
                         ref.read(selectedFoodIdProvider.notifier).state = id;
                         ref.read(bottomTabIndexProvider.notifier).state = 1;
                       },
+                      // colores desde esquema
+                      accent: scheme.tertiary,
                     );
                   }),
                 ],
@@ -216,46 +214,71 @@ class _HeroHeader extends StatelessWidget {
   final String title;
   final String subtitle;
   final String randomLabel;
-  final Color primary, accent;
   final VoidCallback onRandom;
-  final Widget chips;
 
   const _HeroHeader({
     required this.title,
     required this.subtitle,
     required this.randomLabel,
-    required this.primary,
-    required this.accent,
     required this.onRandom,
-    required this.chips,
   });
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final extras = Theme.of(context).extension<AppExtras>()!;
+    final text = Theme.of(context).textTheme;
+
     return Container(
       decoration: BoxDecoration(
-        gradient:
-            LinearGradient(colors: [primary.withValues(alpha: .15), accent.withValues(alpha: .15)]),
+        gradient: extras.heroGradient,
         borderRadius: BorderRadius.circular(20),
       ),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(color: primary, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.auto_awesome, color: Colors.white),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.auto_awesome, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: text.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              _PillIconButton(
+                icon: Icons.casino,
+                label: randomLabel,
+                fg: scheme.primary,
+                onTap: onRandom,
+                bg: extras.pillBg,
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
-          _PillIconButton(icon: Icons.casino, label: randomLabel, fg: primary, onTap: onRandom),
-        ]),
-        const SizedBox(height: 10),
-        Text(subtitle, style: TextStyle(color: Colors.black.withValues(alpha: .7), height: 1.25)),
-        const SizedBox(height: 12),
-        chips,
-      ]),
+          const SizedBox(height: 10),
+          Text(
+            subtitle,
+            style: text.bodySmall?.copyWith(
+              color: extras.subtleText,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const MoodChips(),
+        ],
+      ),
     );
   }
 }
@@ -264,24 +287,36 @@ class _PillIconButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color fg;
+  final Color bg;
   final VoidCallback onTap;
-  const _PillIconButton({required this.icon, required this.label, required this.fg, required this.onTap});
+  const _PillIconButton({
+    required this.icon,
+    required this.label,
+    required this.fg,
+    required this.bg,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: bg,
       borderRadius: BorderRadius.circular(30),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(30),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(children: [
-            Icon(icon, size: 18, color: fg),
-            const SizedBox(width: 8),
-            Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w600)),
-          ]),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: fg),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(color: fg, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -292,32 +327,33 @@ class _FoodCard extends StatelessWidget {
   final String id, verse, description;
   final DateTime date;
   final VoidCallback onOpen;
-  final Color primary, accent;
+  final Color accent;
 
   const _FoodCard({
     required this.id,
     required this.verse,
     required this.description,
     required this.date,
-    required this.primary,
-    required this.accent,
     required this.onOpen,
+    required this.accent,
   });
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     final formattedDate = DateFormat('dd/MM/yyyy').format(date);
+    final shadow = Theme.of(context).brightness == Brightness.dark
+        ? Colors.black.withValues(alpha: .35)
+        : Colors.black12.withValues(alpha: .06);
+
     return Container(
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.white, Colors.white.withValues(alpha: .96)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black12.withValues(alpha: .06), blurRadius: 14, offset: const Offset(0, 6))
+          BoxShadow(color: shadow, blurRadius: 14, offset: const Offset(0, 6)),
         ],
       ),
       child: InkWell(
@@ -325,38 +361,69 @@ class _FoodCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(width: 6, height: 72, decoration: BoxDecoration(color: primary, borderRadius: BorderRadius.circular(8))),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // Verso: 1 línea + …
-                Text(
-                  verse,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 6,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 6),
-                // Descripción: 3 líneas + …
-                Text(
-                  description,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.black.withValues(alpha: .75)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      verse,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyMedium?.copyWith(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: .80)
+                            : Colors.black.withValues(alpha: .75),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _DateChip(
+                          text: formattedDate,
+                          icon: Icons.event,
+                          color: accent,
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FavoriteHeart(foodId: id, iconSize: 22),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.open_in_new),
+                              onPressed: onOpen,
+                              tooltip: 'Abrir',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  _DateChip(text: formattedDate, icon: Icons.event, color: accent),
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    FavoriteHeart(foodId: id, iconSize: 22),
-                    const SizedBox(width: 4),
-                    IconButton(icon: const Icon(Icons.open_in_new), onPressed: onOpen, tooltip: 'Abrir'),
-                  ]),
-                ]),
-              ]),
-            ),
-          ]),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -367,7 +434,11 @@ class _DateChip extends StatelessWidget {
   final String text;
   final IconData icon;
   final Color color;
-  const _DateChip({required this.text, required this.icon, required this.color});
+  const _DateChip({
+    required this.text,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -378,14 +449,20 @@ class _DateChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: color.withValues(alpha: .25)),
       ),
-      child: Row(children: [
-        Icon(icon, size: 14, color: color.withValues(alpha: .9)),
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: TextStyle(fontSize: 12, color: _darken(color), fontWeight: FontWeight.w600),
-        ),
-      ]),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color.withValues(alpha: .9)),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: _darken(color),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

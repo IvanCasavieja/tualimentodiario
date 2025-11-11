@@ -1,4 +1,4 @@
-﻿// lib/features/common/moods.dart
+// lib/features/common/moods.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,11 +16,31 @@ class MoodDef {
 const kMoods = <MoodDef>[
   MoodDef('esperanza', 'Esperanza', Icons.wb_sunny_outlined, Color(0xFF48C1F1)),
   MoodDef('gratitud', 'Gratitud', Icons.favorite_outline, Color(0xFF6C4DF5)),
-  MoodDef('fortaleza', 'Fortaleza', Icons.fitness_center_outlined, Color(0xFF48C1F1)),
+  MoodDef(
+    'fortaleza',
+    'Fortaleza',
+    Icons.fitness_center_outlined,
+    Color(0xFF48C1F1),
+  ),
   MoodDef('paz', 'Paz', Icons.self_improvement_outlined, Color(0xFF6C4DF5)),
-  MoodDef('alegria', 'AlegrÃ­a', Icons.emoji_emotions_outlined, Color(0xFF48C1F1)),
-  MoodDef('consuelo', 'Consuelo', Icons.volunteer_activism_outlined, Color(0xFF6C4DF5)),
-  MoodDef('sabiduria', 'SabidurÃ­a', Icons.psychology_outlined, Color(0xFF48C1F1)),
+  MoodDef(
+    'alegria',
+    'AlegrÃ­a',
+    Icons.emoji_emotions_outlined,
+    Color(0xFF48C1F1),
+  ),
+  MoodDef(
+    'consuelo',
+    'Consuelo',
+    Icons.volunteer_activism_outlined,
+    Color(0xFF6C4DF5),
+  ),
+  MoodDef(
+    'sabiduria',
+    'SabidurÃ­a',
+    Icons.psychology_outlined,
+    Color(0xFF48C1F1),
+  ),
   MoodDef('fe', 'Fe', Icons.auto_fix_high, Color(0xFF6C4DF5)),
   MoodDef('perdon', 'PerdÃ³n', Icons.handshake_outlined, Color(0xFF48C1F1)),
   MoodDef('paciencia', 'Paciencia', Icons.hourglass_empty, Color(0xFF6C4DF5)),
@@ -73,7 +93,10 @@ class MoodChips extends ConsumerWidget {
                 },
                 borderRadius: BorderRadius.circular(28),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(color: border),
@@ -91,7 +114,11 @@ class MoodChips extends ConsumerWidget {
                       ),
                       if (isSel) ...[
                         const SizedBox(width: 6),
-                        Icon(Icons.close, size: 14, color: m.color.withValues(alpha: .9)),
+                        Icon(
+                          Icons.close,
+                          size: 14,
+                          color: m.color.withValues(alpha: .9),
+                        ),
                       ],
                     ],
                   ),
@@ -104,4 +131,3 @@ class MoodChips extends ConsumerWidget {
     );
   }
 }
-

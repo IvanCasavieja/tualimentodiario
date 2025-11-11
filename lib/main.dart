@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_state.dart';
 import 'core/i18n.dart'; // stringsProvider
+import 'core/tema.dart'; // themeModeProvider, textScaleProvider, ThemePrefs, buildLightTheme, buildDarkTheme
 import 'features/home/home_view.dart';
 import 'features/archive/archive_view.dart';
 import 'features/favorites/favorites_view.dart';
@@ -16,17 +17,22 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
+  // Sesión anónima si no hay usuario
   if (FirebaseAuth.instance.currentUser == null) {
     await FirebaseAuth.instance.signInAnonymously();
   }
 
+  // Preferencias persistidas
   final savedLang = await LanguagePrefs.load();
+  final (savedMode, savedScale) = await ThemePrefs.load(); // ThemeMode + double
 
   runApp(
     ProviderScope(
       observers: [LogObserver()],
       overrides: [
         languageProvider.overrideWith((ref) => savedLang),
+        themeModeProvider.overrideWith((ref) => savedMode),
+        textScaleProvider.overrideWith((ref) => savedScale),
       ],
       child: const App(),
     ),
@@ -40,6 +46,8 @@ class App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(languageProvider);
     final t = ref.watch(stringsProvider);
+    final mode = ref.watch(themeModeProvider);
+    final scale = ref.watch(textScaleProvider);
 
     return MaterialApp(
       title: t.appTitle,
@@ -52,6 +60,20 @@ class App extends ConsumerWidget {
         Locale('it'),
       ],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
+      // ⬇⬇ IMPORTANTE: temas que incluyen AppExtras
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
+      themeMode: mode,
+
+      // Aplica textScale globalmente
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        );
+      },
       home: const NavScaffold(),
     );
   }
@@ -97,21 +119,25 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
             ref.read(bottomTabIndexProvider.notifier).state = i,
         destinations: [
           NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(Icons.home),
-              label: t.navHome),
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: t.navHome,
+          ),
           NavigationDestination(
-              icon: const Icon(Icons.folder_copy_outlined),
-              selectedIcon: const Icon(Icons.folder),
-              label: t.navArchive),
+            icon: const Icon(Icons.folder_copy_outlined),
+            selectedIcon: const Icon(Icons.folder),
+            label: t.navArchive,
+          ),
           NavigationDestination(
-              icon: const Icon(Icons.favorite_border),
-              selectedIcon: const Icon(Icons.favorite),
-              label: t.navFavorites),
+            icon: const Icon(Icons.favorite_border),
+            selectedIcon: const Icon(Icons.favorite),
+            label: t.navFavorites,
+          ),
           NavigationDestination(
-              icon: const Icon(Icons.person_outline),
-              selectedIcon: const Icon(Icons.person),
-              label: t.navProfile),
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: t.navProfile,
+          ),
         ],
       ),
     );

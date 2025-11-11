@@ -41,8 +41,7 @@ final signInAnonProvider = Provider<Future<User?> Function()>((ref) {
 /// ---------------------------------------------------------------------------
 /// ✅ HOME STREAM
 /// ---------------------------------------------------------------------------
-final homeStreamProvider =
-    StreamProvider<QuerySnapshot<Map<String, dynamic>>>(
+final homeStreamProvider = StreamProvider<QuerySnapshot<Map<String, dynamic>>>(
   name: 'homeStreamProvider',
   (ref) => FS.homeQuery().snapshots(),
 );
@@ -50,8 +49,7 @@ final homeStreamProvider =
 /// ---------------------------------------------------------------------------
 /// ✅ FAVORITOS
 /// ---------------------------------------------------------------------------
-final favoritesIdsProvider =
-    StreamProvider.family<List<String>, String>(
+final favoritesIdsProvider = StreamProvider.family<List<String>, String>(
   (ref, uid) => FS
       .favCol(uid)
       .orderBy('createdAt', descending: true)
@@ -61,28 +59,24 @@ final favoritesIdsProvider =
 );
 
 final isFavoriteProvider =
-    StreamProvider.family<bool, ({String uid, String foodId})>(
-  (ref, key) {
-    final docRef = FS.favCol(key.uid).doc(key.foodId);
-    return docRef.snapshots().map((doc) => doc.exists);
-  },
-  name: 'isFavoriteProvider',
-);
+    StreamProvider.family<bool, ({String uid, String foodId})>((ref, key) {
+      final docRef = FS.favCol(key.uid).doc(key.foodId);
+      return docRef.snapshots().map((doc) => doc.exists);
+    }, name: 'isFavoriteProvider');
 
 /// ---------------------------------------------------------------------------
 /// ✅ ¿ES ADMIN?
 ///   ✔️ Nueva lógica: compara el UID actual con `kAdminUids`
 ///   ❌ Ya no consulta `admins/{uid}` en Firestore
 /// ---------------------------------------------------------------------------
-final userIsAdminProvider = StreamProvider<bool>(
-  name: 'userIsAdminProvider',
-  (ref) {
-    return FirebaseAuth.instance.authStateChanges().map((user) {
-      final isAdmin = user != null && kAdminUids.contains(user.uid);
-      if (kDebugMode) {
-        debugPrint('[admin] uid=${user?.uid} -> isAdmin=$isAdmin');
-      }
-      return isAdmin;
-    });
-  },
-);
+final userIsAdminProvider = StreamProvider<bool>(name: 'userIsAdminProvider', (
+  ref,
+) {
+  return FirebaseAuth.instance.authStateChanges().map((user) {
+    final isAdmin = user != null && kAdminUids.contains(user.uid);
+    if (kDebugMode) {
+      debugPrint('[admin] uid=${user?.uid} -> isAdmin=$isAdmin');
+    }
+    return isAdmin;
+  });
+});

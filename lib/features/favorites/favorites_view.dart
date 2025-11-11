@@ -41,8 +41,10 @@ class FavoritesView extends ConsumerWidget {
 
           final futures = <Future<QuerySnapshot<Map<String, dynamic>>>>[];
           for (var i = 0; i < ids.length; i += 10) {
-            final chunk =
-                ids.sublist(i, (i + 10 > ids.length) ? ids.length : i + 10);
+            final chunk = ids.sublist(
+              i,
+              (i + 10 > ids.length) ? ids.length : i + 10,
+            );
             futures.add(
               FirebaseFirestore.instance
                   .collection('dailyFoods')
@@ -83,8 +85,10 @@ class FavoritesView extends ConsumerWidget {
                         {},
                   );
                   return Card(
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: ListTile(
                       title: Text((tr['verse'] ?? '').toString()),
                       subtitle: Text(

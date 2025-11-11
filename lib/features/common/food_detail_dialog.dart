@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -8,11 +8,7 @@ import '../../core/i18n.dart'; // stringsProvider
 import '../common/favorite_heart.dart';
 
 class FoodDetailDialog extends ConsumerStatefulWidget {
-  const FoodDetailDialog({
-    super.key,
-    required this.item,
-    required this.lang,
-  });
+  const FoodDetailDialog({super.key, required this.item, required this.lang});
 
   final DailyFood item;
   final String lang;
@@ -32,10 +28,10 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     duration: const Duration(milliseconds: 900),
   )..repeat(reverse: true);
 
-  late final Animation<double> _hintOffset =
-      Tween<double>(begin: 0, end: 6).animate(
-    CurvedAnimation(parent: _hintAnim, curve: Curves.easeInOut),
-  );
+  late final Animation<double> _hintOffset = Tween<double>(
+    begin: 0,
+    end: 6,
+  ).animate(CurvedAnimation(parent: _hintAnim, curve: Curves.easeInOut));
 
   @override
   void initState() {
@@ -46,7 +42,8 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
       final canScroll = _scrollCtrl.position.maxScrollExtent > 0;
       setState(() {
         _canScroll = canScroll;
-        _atEnd = _scrollCtrl.position.pixels >=
+        _atEnd =
+            _scrollCtrl.position.pixels >=
             _scrollCtrl.position.maxScrollExtent - 2;
       });
     });
@@ -54,8 +51,8 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
 
   void _onScroll() {
     if (!_scrollCtrl.hasClients) return;
-    final atEnd = _scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 2;
+    final atEnd =
+        _scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 2;
     if (atEnd != _atEnd) setState(() => _atEnd = atEnd);
   }
 
@@ -172,7 +169,9 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                                 description,
                                 textAlign: TextAlign.left,
                                 style: const TextStyle(
-                                    fontSize: 15, height: 1.35),
+                                  fontSize: 15,
+                                  height: 1.35,
+                                ),
                               ),
                               const SizedBox(height: 12),
                             ],
@@ -181,7 +180,9 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                                 reflection,
                                 textAlign: TextAlign.left,
                                 style: const TextStyle(
-                                    fontSize: 15, height: 1.35),
+                                  fontSize: 15,
+                                  height: 1.35,
+                                ),
                               ),
                               const SizedBox(height: 12),
                             ],
@@ -198,7 +199,9 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                                 prayer,
                                 textAlign: TextAlign.left,
                                 style: const TextStyle(
-                                    fontSize: 15, height: 1.35),
+                                  fontSize: 15,
+                                  height: 1.35,
+                                ),
                               ),
                               const SizedBox(height: 12),
                             ],
@@ -206,9 +209,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                               '$farewell.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primary,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -232,9 +233,15 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  (Theme.of(context).dialogTheme.backgroundColor ?? Colors.white)
+                                  (Theme.of(
+                                            context,
+                                          ).dialogTheme.backgroundColor ??
+                                          Colors.white)
                                       .withValues(alpha: 0.0),
-                                  (Theme.of(context).dialogTheme.backgroundColor ?? Colors.white)
+                                  (Theme.of(
+                                            context,
+                                          ).dialogTheme.backgroundColor ??
+                                          Colors.white)
                                       .withValues(alpha: 0.9),
                                 ],
                               ),
@@ -255,8 +262,10 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.keyboard_arrow_down,
-                                        size: 20),
+                                    const Icon(
+                                      Icons.keyboard_arrow_down,
+                                      size: 20,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       t.scrollHint,
@@ -288,6 +297,3 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     );
   }
 }
-
-
-

@@ -26,8 +26,9 @@ class FavoriteHeart extends ConsumerWidget {
       );
     }
 
-    final isFavAsync =
-        ref.watch(isFavoriteProvider((uid: user.uid, foodId: foodId)));
+    final isFavAsync = ref.watch(
+      isFavoriteProvider((uid: user.uid, foodId: foodId)),
+    );
 
     return isFavAsync.when(
       loading: () => SizedBox(
@@ -46,11 +47,7 @@ class FavoriteHeart extends ConsumerWidget {
         icon: Icon(isFav ? Icons.favorite : Icons.favorite_border),
         color: isFav ? Theme.of(context).colorScheme.error : null,
         onPressed: () async {
-          await FS.toggleFavorite(
-            uid: user.uid,
-            foodId: foodId,
-            add: !isFav,
-          );
+          await FS.toggleFavorite(uid: user.uid, foodId: foodId, add: !isFav);
         },
       ),
     );

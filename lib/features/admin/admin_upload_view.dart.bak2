@@ -1,4 +1,5 @@
-﻿// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
+﻿// lib/features/admin/admin_upload_view.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ import 'package:intl/intl.dart';
 import '../../core/providers.dart'; // userIsAdminProvider
 import '../../core/app_state.dart'; // languageProvider
 import '../../core/moods_i18n.dart'
-    show moodLabelI18n; // <-- usar la misma traducciÃ³n que Home
+    show moodLabelI18n; // <-- usar la misma traducción que Home
 import '../common/moods.dart' show kMoods; // lista de moods (slug, icon, color)
 
 class AdminUploadView extends ConsumerStatefulWidget {
@@ -22,17 +23,17 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   // Idiomas / tabs
   static const langs = ['es', 'en', 'pt', 'it'];
   static const langLabels = {
-    'es': 'EspaÃ±ol',
+    'es': 'Español',
     'en': 'English',
-    'pt': 'PortuguÃªs',
+    'pt': 'Português',
     'it': 'Italiano',
   };
 
   // Despedidas fijas
   static const Map<String, String> kFarewells = {
-    'es': 'Bendecido DÃ­a',
+    'es': 'Bendecido Día',
     'en': 'Blessed day',
-    'pt': 'Dia abenÃ§oado',
+    'pt': 'Dia abençoado',
     'it': 'Giorno benedetto',
   };
 
@@ -44,7 +45,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   /// Publicamos directo (sin switch)
   final bool _isPublished = true;
 
-  /// SelecciÃ³n de moods (mÃ¡x. 3) â€“ GUARDAREMOS SLUGS EN ESPAÃ‘OL
+  /// Selección de moods (máx. 3) – GUARDAREMOS SLUGS EN ESPAÑOL
   final Set<String> _selectedMoods = {};
 
   /// Pasos completados (por idioma)
@@ -109,14 +110,14 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     if (_isLangValid(lang)) {
       setState(() => _completed.add(lang));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Paso ${langLabels[lang]} completado âœ“')),
+        SnackBar(content: Text('Paso ${langLabels[lang]} completado ✓')),
       );
     } else {
       _tabs.index = langs.indexOf(lang);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'CompletÃ¡ VersÃ­culo, al menos 1 pÃ¡rrafo y la OraciÃ³n en ${langLabels[lang]}',
+            'Completá Versículo, al menos 1 párrafo y la Oración en ${langLabels[lang]}',
           ),
         ),
       );
@@ -150,7 +151,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                     Row(
                       children: [
                         const Text(
-                          'SeleccionÃ¡ hasta 3 moods',
+                          'Seleccioná hasta 3 moods',
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                         const Spacer(),
@@ -226,18 +227,18 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     final isAdmin = ref.read(userIsAdminProvider).value ?? false;
     final user = FirebaseAuth.instance.currentUser;
 
-    debugPrint('---------------------------');
-    debugPrint('ðŸ” Intentando publicar alimento diario');
-    debugPrint('isAdmin (cliente): $isAdmin');
-    debugPrint('UID actual: ${user?.uid}');
-    debugPrint('Email: ${user?.email}');
-    debugPrint('DisplayName: ${user?.displayName}');
-    debugPrint('---------------------------');
+    print('---------------------------');
+    print('🔍 Intentando publicar alimento diario');
+    print('isAdmin (cliente): $isAdmin');
+    print('UID actual: ${user?.uid}');
+    print('Email: ${user?.email}');
+    print('DisplayName: ${user?.displayName}');
+    print('---------------------------');
 
     if (!isAdmin || user == null) {
-      debugPrint('â›” Bloqueado localmente: no tenÃ©s permisos para publicar.');
+      print('⛔ Bloqueado localmente: no tenés permisos para publicar.');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No tenÃ©s permisos para publicar.')),
+        const SnackBar(content: Text('No tenés permisos para publicar.')),
       );
       return;
     }
@@ -246,7 +247,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     for (final l in langs) {
       if (!_isLangValid(l)) {
         _tabs.index = langs.indexOf(l);
-        debugPrint('âš ï¸ Falta completar idioma: $l');
+        print('⚠️ Falta completar idioma: $l');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falta completar ${langLabels[l]}')),
         );
@@ -286,13 +287,13 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
-    debugPrint('ðŸ“¤ Datos que se enviarÃ¡n a Firestore:');
-    debugPrint(dataToSend.toString());
-    debugPrint('---------------------------');
+    print('📤 Datos que se enviarán a Firestore:');
+    print(dataToSend);
+    print('---------------------------');
 
     try {
       await FirebaseFirestore.instance.collection('dailyFoods').add(dataToSend);
-      debugPrint('âœ… Documento enviado correctamente');
+      print('✅ Documento enviado correctamente');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Alimento publicado correctamente')),
@@ -300,7 +301,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
         Navigator.of(context).maybePop();
       }
     } catch (e) {
-      debugPrint('ðŸ”¥ ERROR al publicar en Firestore: $e');
+      print('🔥 ERROR al publicar en Firestore: $e');
 
       ScaffoldMessenger.of(
         context,
@@ -313,7 +314,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     final isAdminAsync = ref.watch(userIsAdminProvider);
     final currentLang = ref
         .watch(languageProvider)
-        .name; // por si lo necesitÃ¡s en UI
+        .name; // por si lo necesitás en UI
 
     return Scaffold(
       appBar: AppBar(title: const Text('Subir alimento diario')),
@@ -323,7 +324,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
         data: (isAdmin) {
           if (!isAdmin) {
             return const Center(
-              child: Text('No tenÃ©s permisos para acceder a este panel.'),
+              child: Text('No tenés permisos para acceder a este panel.'),
             );
           }
           final completedCount = _completed.length;
@@ -344,7 +345,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                   onTap: _openMoodSelector,
                   child: InputDecorator(
                     decoration: InputDecoration(
-                      labelText: 'Moods (mÃ¡x. 3)',
+                      labelText: 'Moods (máx. 3)',
                       border: const OutlineInputBorder(),
                       suffixIcon: Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -355,7 +356,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                       ),
                     ),
                     child: _selectedMoods.isEmpty
-                        ? const Text('TocÃ¡ para seleccionar')
+                        ? const Text('Tocá para seleccionar')
                         : Wrap(
                             spacing: 8,
                             runSpacing: -6,
@@ -494,16 +495,16 @@ class _LangForm extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // VersÃ­culo
+        // Versículo
         TextField(
           controller: verse,
           onChanged: (_) => onDirty(),
-          decoration: const InputDecoration(labelText: 'VersÃ­culo'),
+          decoration: const InputDecoration(labelText: 'Versículo'),
         ),
         const SizedBox(height: 12),
 
         const Text(
-          'PÃ¡rrafos (DescripciÃ³n)',
+          'Párrafos (Descripción)',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
@@ -517,7 +518,7 @@ class _LangForm extends StatelessWidget {
                     controller: paragraphs[i],
                     onChanged: (_) => onDirty(),
                     maxLines: null,
-                    decoration: InputDecoration(labelText: 'PÃ¡rrafo ${i + 1}'),
+                    decoration: InputDecoration(labelText: 'Párrafo ${i + 1}'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -539,17 +540,17 @@ class _LangForm extends StatelessWidget {
           child: TextButton.icon(
             onPressed: onAddParagraph,
             icon: const Icon(Icons.add),
-            label: const Text('Agregar pÃ¡rrafo'),
+            label: const Text('Agregar párrafo'),
           ),
         ),
         const SizedBox(height: 8),
 
-        // OraciÃ³n (obligatoria)
+        // Oración (obligatoria)
         TextField(
           controller: prayer,
           onChanged: (_) => onDirty(),
           maxLines: null,
-          decoration: const InputDecoration(labelText: 'OraciÃ³n (obligatoria)'),
+          decoration: const InputDecoration(labelText: 'Oración (obligatoria)'),
         ),
         const SizedBox(height: 12),
 
@@ -561,7 +562,7 @@ class _LangForm extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // BotÃ³n completar paso
+        // Botón completar paso
         Align(
           alignment: Alignment.centerRight,
           child: FilledButton.icon(
@@ -577,22 +578,14 @@ class _LangForm extends StatelessWidget {
   String _title(String lang) {
     switch (lang) {
       case 'es':
-        return 'EspaÃ±ol';
+        return 'Español';
       case 'en':
         return 'English';
       case 'pt':
-        return 'PortuguÃªs';
+        return 'Português';
       case 'it':
         return 'Italiano';
     }
     return lang;
   }
 }
-
-
-
-
-
-
-
-

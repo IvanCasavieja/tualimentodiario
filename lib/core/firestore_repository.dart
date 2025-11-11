@@ -44,7 +44,9 @@ class FS {
     final favRef = favCol(uid).doc(foodId);
 
     if (add) {
-      await favRef.set({'createdAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+      await favRef.set({
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     } else {
       await favRef.delete();
     }
