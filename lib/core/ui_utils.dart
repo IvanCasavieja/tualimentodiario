@@ -16,7 +16,7 @@ String langFarewell(String code) {
     case 'es':
       return 'Bendecido día';
   }
-  // No debería llegar acá
+  // No debería llegar aquí
   return 'Bendecido día';
 }
 
@@ -32,3 +32,4 @@ String langCodeOf(AppLang l) {
       return 'es';
   }
 }
+

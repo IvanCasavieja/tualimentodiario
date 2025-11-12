@@ -1,4 +1,4 @@
-﻿// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,26 +8,18 @@ import 'package:intl/intl.dart';
 import '../../core/providers.dart'; // userIsAdminProvider
 import '../../core/app_state.dart'; // languageProvider
 import '../../core/i18n.dart'; // stringsProvider
-import '../../core/moods_i18n.dart'
-    show moodLabelI18n; // <-- usar la misma traducciÃ³n que Home
+import '../../core/moods_i18n.dart' show moodLabelI18n;
 import '../common/moods.dart' show kMoods; // lista de moods (slug, icon, color)
 
-// Vista de administración para crear y publicar el "Alimento Diario".
-// - Soporta pestañas por idioma (es, en, pt, it).
-// - Permite seleccionar hasta 3 moods y valida campos requeridos.
-// - Publica en Firestore (colección `dailyFoods`) con metadatos básicos.
-
-/// Pantalla principal del panel de carga del Alimento Diario.
+/// Admin: crear y publicar el "Alimento Diario" (ES/EN/PT/IT)
 class AdminUploadView extends ConsumerStatefulWidget {
   const AdminUploadView({super.key});
   @override
   ConsumerState<AdminUploadView> createState() => _AdminUploadViewState();
 }
 
-// Estado de la pantalla: controla pestañas, validaciones y envío a Firestore.
 class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     with TickerProviderStateMixin {
-  // Idiomas / tabs
   static const langs = ['es', 'en', 'pt', 'it'];
   static const langLabels = {
     'es': 'Español',
@@ -36,30 +28,19 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     'it': 'Italiano',
   };
 
-  // Despedidas fijas
   static const Map<String, String> kFarewells = {
-    'es': 'Bendecido Día',
+    'es': 'Bendecido día',
     'en': 'Blessed day',
     'pt': 'Dia abençoado',
     'it': 'Giorno benedetto',
   };
 
-  // Controlador de pestañas para alternar entre idiomas.
-  late final TabController _tabs = TabController(
-    length: langs.length,
-    vsync: this,
-  );
+  late final TabController _tabs = TabController(length: langs.length, vsync: this);
 
-  /// Publicamos directo (sin switch)
   final bool _isPublished = true;
-
-  /// SelecciÃ³n de Moods (máx. 3) â€“ GUARDAREMOS SLUGS EN Español
   final Set<String> _selectedMoods = {};
-
-  /// Pasos completados (por idioma)
   final Set<String> _completed = {};
 
-  // Campos por idioma
   final Map<String, TextEditingController> _verse = {
     for (final l in langs) l: TextEditingController(),
   };
@@ -73,17 +54,11 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   @override
   void dispose() {
     _tabs.dispose();
-    for (final c in _verse.values) {
-      c.dispose();
-    }
+    for (final c in _verse.values) c.dispose();
     for (final list in _paragraphs.values) {
-      for (final c in list) {
-        c.dispose();
-      }
+      for (final c in list) c.dispose();
     }
-    for (final c in _prayer.values) {
-      c.dispose();
-    }
+    for (final c in _prayer.values) c.dispose();
     super.dispose();
   }
 
@@ -95,13 +70,11 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     if (_paragraphs[lang]!.length <= 1) return;
     final c = _paragraphs[lang]!.removeAt(idx);
     c.dispose();
-    setState(() => _completed.remove(lang)); // si edita, invalidamos el paso
+    setState(() => _completed.remove(lang));
   }
 
   void _markDirty(String lang) {
-    if (_completed.contains(lang)) {
-      setState(() => _completed.remove(lang));
-    }
+    if (_completed.contains(lang)) setState(() => _completed.remove(lang));
   }
 
   bool _isLangValid(String lang) {
@@ -118,14 +91,14 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     if (_isLangValid(lang)) {
       setState(() => _completed.add(lang));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Paso \\ completado ?')),
+        const SnackBar(content: Text('Paso completado')),
       );
     } else {
       _tabs.index = langs.indexOf(lang);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Completá Versículo, al menos 1 párrafo y la Oración en ',
+            'Completá Versículo, al menos 1 párrafo y la Oración en ${langLabels[lang]}',
           ),
         ),
       );
@@ -141,15 +114,12 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheet) {
-            final currentLang = ref
-                .read(languageProvider)
-                .name; // 'es'|'en'|'pt'|'it'
+            final langCode = ref.read(languageProvider).name; // 'es'|'en'|'pt'|'it'
             String labelFor(String slug, String fallback) => moodLabelI18n(
-              slug: slug,
-              langCode: currentLang,
-              fallbackLabel: fallback,
-            );
-
+                  slug: slug,
+                  langCode: langCode,
+                  fallbackLabel: fallback,
+                );
             return SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -159,14 +129,11 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                     Row(
                       children: [
                         const Text(
-                          'SeleccionÃ¡ hasta 3 moods',
+                          'Seleccioná hasta 3 moods',
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                         const Spacer(),
-                        Text(
-                          '(${temp.length}/3)',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
+                        Text('(${temp.length}/3)', style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -182,17 +149,13 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                             title: Text(labelFor(m.slug, m.label)),
                             trailing: sel
                                 ? const Icon(Icons.check_circle, size: 20)
-                                : const Icon(
-                                    Icons.radio_button_unchecked,
-                                    size: 20,
-                                    color: Colors.grey,
-                                  ),
+                                : const Icon(Icons.radio_button_unchecked, size: 20, color: Colors.grey),
                             onTap: () {
                               setSheet(() {
                                 if (sel) {
                                   temp.remove(m.slug);
-                                } else {
-                                  if (temp.length < 3) temp.add(m.slug);
+                                } else if (temp.length < 3) {
+                                  temp.add(m.slug);
                                 }
                               });
                             },
@@ -203,10 +166,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Cancelar'),
-                        ),
+                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
                         const Spacer(),
                         FilledButton(
                           onPressed: () {
@@ -234,28 +194,16 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   Future<void> _submit() async {
     final isAdmin = ref.read(userIsAdminProvider).value ?? false;
     final user = FirebaseAuth.instance.currentUser;
-
-    debugPrint('---------------------------');
-    debugPrint('ðŸ” Intentando publicar alimento diario');
-    debugPrint('isAdmin (cliente): $isAdmin');
-    debugPrint('UID actual: ${user?.uid}');
-    debugPrint('Email: ${user?.email}');
-    debugPrint('DisplayName: ${user?.displayName}');
-    debugPrint('---------------------------');
-
     if (!isAdmin || user == null) {
-      debugPrint('â›” Bloqueado localmente: no tenÃ©s permisos para publicar.');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No tenÃ©s permisos para publicar.')),
+        const SnackBar(content: Text('No tenés permisos para publicar.')),
       );
       return;
     }
 
-    // Validar todos los idiomas
     for (final l in langs) {
       if (!_isLangValid(l)) {
         _tabs.index = langs.indexOf(l);
-        debugPrint('âš ï¸ Falta completar idioma: $l');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Falta completar ${langLabels[l]}')),
         );
@@ -263,7 +211,6 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       }
     }
 
-    // Construir traducciones
     final Map<String, dynamic> translations = {};
     for (final l in langs) {
       final verse = _verse[l]!.text.trim();
@@ -295,13 +242,8 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
-    debugPrint('ðŸ“¤ Datos que se enviarÃ¡n a Firestore:');
-    debugPrint(dataToSend.toString());
-    debugPrint('---------------------------');
-
     try {
       await FirebaseFirestore.instance.collection('dailyFoods').add(dataToSend);
-      debugPrint('âœ… Documento enviado correctamente');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Alimento publicado correctamente')),
@@ -309,179 +251,110 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
         Navigator.of(context).maybePop();
       }
     } catch (e) {
-      debugPrint('ðŸ”¥ ERROR al publicar en Firestore: $e');
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al publicar: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al publicar: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isAdminAsync = ref.watch(userIsAdminProvider);
-    final currentLang = ref
-        .watch(languageProvider)
-        .name; // por si lo necesitÃ¡s en UI
-
     final t = ref.watch(stringsProvider);
     return Scaffold(
       appBar: AppBar(title: Text(t.adminUpload)),
       body: isAdminAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (isAdmin) {
-          if (!isAdmin) {
-            return const Center(
-              child: Text('No tenés permisos para acceder a este panel.'),
-            );
-          }
-          final completedCount = _completed.length;
+        data: (isAdmin) => isAdmin == true
+            ? _buildForm(context)
+            : const Center(child: Text('No tenés permisos para publicar.')),
+      ),
+    );
+  }
 
-          String moodLabel(String slug, String fallback) => moodLabelI18n(
-            slug: slug,
-            langCode: currentLang,
-            fallbackLabel: fallback,
-          );
-
-          return Column(
-            children: [
-              // Selector de moods (select)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: _openMoodSelector,
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Moods (máx. 3)',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Text(
-                          '(${_selectedMoods.length}/3)',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                    ),
-                    child: _selectedMoods.isEmpty
-                        ? const Text('Toca para seleccionar')
-                        : Wrap(
-                            spacing: 8,
-                            runSpacing: -6,
-                            children: _selectedMoods.map((slug) {
-                              final base = kMoods.firstWhere(
-                                (m) => m.slug == slug,
-                              );
-                              final label = moodLabel(slug, base.label);
-                              return Chip(
-                                label: Text(label),
-                                onDeleted: () => setState(() {
-                                  _selectedMoods.remove(slug);
-                                }),
-                              );
-                            }).toList(),
-                          ),
-                  ),
+  Widget _buildForm(BuildContext context) {
+    return DefaultTabController(
+      length: langs.length,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: Row(
+              children: [
+                FilledButton.icon(
+                  onPressed: _openMoodSelector,
+                  icon: const Icon(Icons.emoji_emotions_outlined),
+                  label: Text('Moods (${_selectedMoods.length}/3)'),
                 ),
-              ),
-
-              // Tabs alineados a la izquierda
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TabBar(
-                  controller: _tabs,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  indicatorPadding: const EdgeInsets.only(left: 8, right: 8),
-                  tabs: [for (final l in langs) Tab(text: langLabels[l])],
+                const Spacer(),
+                FilledButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.cloud_upload),
+                  label: const Text('Publicar'),
                 ),
-              ),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabs,
-                  children: [
-                    for (final l in langs)
-                      _LangForm(
-                        lang: l,
-                        verse: _verse[l]!,
-                        paragraphs: _paragraphs[l]!,
-                        prayer: _prayer[l]!,
-                        farewellText: kFarewells[l] ?? '',
-                        isCompleted: _completed.contains(l),
-                        onAddParagraph: () => _addParagraph(l),
-                        onRemoveParagraph: (i) => _removeParagraph(l, i),
-                        onDirty: () => _markDirty(l),
-                        onValidateAndComplete: () => _validateAndComplete(l),
-                      ),
-                  ],
-                ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Pasos completados $completedCount de ${langs.length}',
-                          style: TextStyle(
-                            color: completedCount == langs.length
-                                ? Colors.green[700]
-                                : Colors.grey[700],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      FilledButton.icon(
-                        onPressed: completedCount == langs.length
-                            ? _submit
-                            : null,
-                        icon: const Icon(Icons.cloud_upload),
-                        label: const Text('Publicar'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+              ],
+            ),
+          ),
+          TabBar(
+            controller: _tabs,
+            isScrollable: true,
+            tabs: langs.map((l) => Tab(text: langLabels[l])).toList(),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: langs.map((l) {
+                return _LangForm(
+                  lang: l,
+                  verse: _verse[l]!,
+                  paragraphs: _paragraphs[l]!,
+                  prayer: _prayer[l]!,
+                  farewellText: kFarewells[l] ?? '',
+                  onAddParagraph: () => _addParagraph(l),
+                  onRemoveParagraph: (i) => _removeParagraph(l, i),
+                  onDirty: () => _markDirty(l),
+                  onValidateAndComplete: () => _validateAndComplete(l),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _LangForm extends StatelessWidget {
+  final String lang;
+  final TextEditingController verse;
+  final List<TextEditingController> paragraphs;
+  final TextEditingController prayer;
+  final String farewellText;
+  final VoidCallback onAddParagraph;
+  final void Function(int idx) onRemoveParagraph;
+  final VoidCallback onDirty;
+  final VoidCallback onValidateAndComplete;
+
   const _LangForm({
     required this.lang,
     required this.verse,
     required this.paragraphs,
     required this.prayer,
     required this.farewellText,
-    required this.isCompleted,
     required this.onAddParagraph,
     required this.onRemoveParagraph,
     required this.onDirty,
     required this.onValidateAndComplete,
   });
 
-  final String lang;
-  final TextEditingController verse;
-  final List<TextEditingController> paragraphs;
-  final TextEditingController prayer;
-  final String farewellText;
-  final bool isCompleted;
-  final VoidCallback onAddParagraph;
-  final void Function(int idx) onRemoveParagraph;
-  final VoidCallback onDirty;
-  final VoidCallback onValidateAndComplete;
-
   @override
   Widget build(BuildContext context) {
-    final badge = isCompleted
+    final badge = paragraphs.any((c) => c.text.trim().isNotEmpty) &&
+            verse.text.trim().isNotEmpty &&
+            prayer.text.trim().isNotEmpty
         ? Row(
+            mainAxisSize: MainAxisSize.min,
             children: const [
               SizedBox(width: 6),
               Icon(Icons.verified, size: 16, color: Colors.green),
@@ -494,28 +367,22 @@ class _LangForm extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              'Paso: ${_title(lang)}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
+            Text('Paso: ${_title(lang)}', style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(width: 6),
             badge,
           ],
         ),
         const SizedBox(height: 12),
 
-        // VersÃ­culo
+        // Versículo
         TextField(
           controller: verse,
           onChanged: (_) => onDirty(),
-          decoration: const InputDecoration(labelText: 'VersÃ­culo'),
+          decoration: const InputDecoration(labelText: 'Versículo'),
         ),
         const SizedBox(height: 12),
 
-        const Text(
-          'PÃ¡rrafos (DescripciÃ³n)',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        const Text('Párrafos (Descripción)', style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         ...List.generate(paragraphs.length, (i) {
           return Padding(
@@ -527,17 +394,13 @@ class _LangForm extends StatelessWidget {
                     controller: paragraphs[i],
                     onChanged: (_) => onDirty(),
                     maxLines: null,
-                    decoration: InputDecoration(labelText: 'PÃ¡rrafo ${i + 1}'),
+                    decoration: InputDecoration(labelText: 'Párrafo ${i + 1}'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  tooltip: paragraphs.length > 1
-                      ? 'Eliminar'
-                      : 'No se puede eliminar',
-                  onPressed: paragraphs.length > 1
-                      ? () => onRemoveParagraph(i)
-                      : null,
+                  tooltip: paragraphs.length > 1 ? 'Eliminar' : 'No se puede eliminar',
+                  onPressed: paragraphs.length > 1 ? () => onRemoveParagraph(i) : null,
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
               ],
@@ -549,17 +412,17 @@ class _LangForm extends StatelessWidget {
           child: TextButton.icon(
             onPressed: onAddParagraph,
             icon: const Icon(Icons.add),
-            label: const Text('Agregar pÃ¡rrafo'),
+            label: const Text('Agregar párrafo'),
           ),
         ),
         const SizedBox(height: 8),
 
-        // OraciÃ³n (obligatoria)
+        // Oración (obligatoria)
         TextField(
           controller: prayer,
           onChanged: (_) => onDirty(),
           maxLines: null,
-          decoration: const InputDecoration(labelText: 'OraciÃ³n (obligatoria)'),
+          decoration: const InputDecoration(labelText: 'Oración (obligatoria)'),
         ),
         const SizedBox(height: 12),
 
@@ -571,7 +434,6 @@ class _LangForm extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // BotÃ³n completar paso
         Align(
           alignment: Alignment.centerRight,
           child: FilledButton.icon(
@@ -591,22 +453,10 @@ class _LangForm extends StatelessWidget {
       case 'en':
         return 'English';
       case 'pt':
-        return 'PortuguÃªs';
+        return 'Português';
       case 'it':
         return 'Italiano';
     }
     return lang;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

@@ -41,6 +41,10 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   String? _error;
   String? _rawError;
 
+  // Serializa aperturas por ID para evitar carreras al spamear "azar".
+  bool _openingById = false;
+  String? _queuedOpenId;
+
   final _fromCtrl = TextEditingController();
   final _toCtrl = TextEditingController();
 
@@ -66,8 +70,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       next,
     ) async {
       if (next != null) {
-        await _openById(next);
-        ref.read(selectedFoodIdProvider.notifier).state = null;
+        _enqueueOpenById(next);
       }
     });
 
@@ -81,8 +84,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     final pending = ref.read(selectedFoodIdProvider);
     if (pending != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _openById(pending);
-        ref.read(selectedFoodIdProvider.notifier).state = null;
+        _enqueueOpenById(pending);
       });
     }
 
@@ -138,7 +140,9 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   }
 
   Future<void> _loadPage(int targetPage) async {
-    if (_loading) return;
+    if (_loading) {
+      await _waitWhileLoading(maxWait: const Duration(seconds: 8));
+    }
     setState(() {
       _loading = true;
       _items.clear();
@@ -216,6 +220,42 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         }
       }
     }
+
+    // Fallback: intenta obtener el documento directo por ID
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('dailyFoods')
+          .doc(id)
+          .get();
+      if (doc.exists) {
+        final map = doc.data();
+        final data = (map is Map)
+            ? Map<String, dynamic>.from(map as Map)
+            : <String, dynamic>{};
+        if (data.isEmpty || data['isPublished'] == true) {
+          final stats = data['stats'];
+          final favs = (stats is Map ? stats['favoritesCount'] : 0) ?? 0;
+          final item = DailyFood(
+            id: id,
+            date: data['date'] ?? '',
+            authorUid: data['authorUid'] ?? '',
+            authorName: data['authorName'] ?? '',
+            isPublished: data['isPublished'] ?? false,
+            translations: Map<String, dynamic>.from(data['translations'] ?? {}),
+            favoritesCount: favs is int ? favs : int.tryParse('$favs') ?? 0,
+          );
+          final lang = _langCode;
+          if (mounted) {
+            // ignore: use_build_context_synchronously
+            showDialog(
+              context: context,
+              builder: (_) => FoodDetailDialog(item: item, lang: lang),
+            );
+          }
+          return;
+        }
+      }
+    } catch (_) {}
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -310,6 +350,44 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       context: context,
       builder: (_) => FoodDetailDialog(item: item, lang: lang),
     );
+  }
+
+  // Serializa aperturas por ID provenientes de Random o toques rápidos.
+  void _enqueueOpenById(String id) {
+    _queuedOpenId = id; // coalesce: quedarse con el último
+    if (!_openingById) {
+      _processOpenQueue();
+    }
+  }
+
+  Future<void> _processOpenQueue() async {
+    _openingById = true;
+    try {
+      while (_queuedOpenId != null) {
+        final id = _queuedOpenId!;
+        _queuedOpenId = null;
+        await _waitWhileLoading();
+        await _openById(id);
+        ref.read(selectedFoodIdProvider.notifier).state = null;
+      }
+    } finally {
+      _openingById = false;
+    }
+  }
+
+  Future<void> _waitWhileLoading({Duration maxWait = const Duration(seconds: 10)}) async {
+    final start = DateTime.now();
+    while (_loading) {
+      await Future.delayed(const Duration(milliseconds: 30));
+      if (DateTime.now().difference(start) > maxWait) {
+        if (mounted) {
+          setState(() {
+            _loading = false; // reseteo defensivo si algo quedó colgado
+          });
+        }
+        break;
+      }
+    }
   }
 
   // ================= COMPARTIR =================
@@ -952,3 +1030,34 @@ class _Paginator extends StatelessWidget {
     );
   }
 }
+/*
+  void _enqueueOpenById(String id) {
+    _queuedOpenId = id; // coalesce: nos quedamos con el último
+    if (!_openingById) {
+      _processOpenQueue();
+    }
+  }
+
+  Future<void> _processOpenQueue() async {
+    _openingById = true;
+    try {
+      while (_queuedOpenId != null) {
+        final id = _queuedOpenId!;
+        _queuedOpenId = null;
+        // Evita competir con cargas de página en curso
+        await _waitWhileLoading();
+        await _openById(id);
+        // Limpia la selección para evitar reaperturas
+        ref.read(selectedFoodIdProvider.notifier).state = null;
+      }
+    } finally {
+      _openingById = false;
+    }
+  }
+
+  Future<void> _waitWhileLoading() async {
+    while (_loading) {
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
+  }
+*/

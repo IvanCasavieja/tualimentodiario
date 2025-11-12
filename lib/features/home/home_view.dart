@@ -15,6 +15,8 @@ import '../../core/tema.dart'; // AppExtras
 import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
+import '../../core/models/daily_food.dart';
+import '../common/food_detail_dialog.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
@@ -25,6 +27,7 @@ class HomeView extends ConsumerStatefulWidget {
 
 class _HomeViewState extends ConsumerState<HomeView> {
   ProviderSubscription<Set<String>>? _moodsSub;
+  bool _randomInFlight = false;
 
   @override
   void initState() {
@@ -55,23 +58,41 @@ class _HomeViewState extends ConsumerState<HomeView> {
       .limit(5);
 
   Future<void> _openRandom() async {
+    if (_randomInFlight) return;
+    _randomInFlight = true;
     try {
+      // Rango fijo: del 1 de agosto al 31 de octubre (año actual)
+      final now = DateTime.now();
+      final startMonth = DateTime(now.year, 8, 1);
+      final endMonth = DateTime(now.year, 10, 31);
+      final startStr = DateFormat('yyyy-MM-dd').format(startMonth);
+      final endStr = DateFormat('yyyy-MM-dd').format(endMonth);
+
       final snap = await FirebaseFirestore.instance
           .collection('dailyFoods')
           .where('isPublished', isEqualTo: true)
+          .where('date', isGreaterThanOrEqualTo: startStr)
+          .where('date', isLessThanOrEqualTo: endStr)
           .orderBy('date', descending: true)
           .orderBy(FieldPath.documentId, descending: true)
-          .limit(30)
+          .limit(100)
           .get();
       if (snap.docs.isEmpty) return;
       final doc = snap.docs[Random().nextInt(snap.docs.length)];
-      ref.read(selectedFoodIdProvider.notifier).state = doc.id;
-      ref.read(bottomTabIndexProvider.notifier).state = 1;
+      final item = DailyFood.fromDoc(doc);
+      final lang = _toCode(ref.read(languageProvider));
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (_) => FoodDetailDialog(item: item, lang: lang),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo abrir un contenido al azar: $e')),
       );
+    } finally {
+      _randomInFlight = false;
     }
   }
 
@@ -113,6 +134,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
                     subtitle: t.headerSubtitle,
                     onRandom: _openRandom,
                     randomLabel: t.headerSurprise,
+                    randomEnabled: !_randomInFlight,
                   ),
                   const SizedBox(height: 12),
                   ...docs.map((d) {
@@ -216,12 +238,14 @@ class _HeroHeader extends StatelessWidget {
   final String subtitle;
   final String randomLabel;
   final VoidCallback onRandom;
+  final bool randomEnabled;
 
   const _HeroHeader({
     required this.title,
     required this.subtitle,
     required this.randomLabel,
     required this.onRandom,
+    this.randomEnabled = true,
   });
 
   @override
@@ -263,8 +287,9 @@ class _HeroHeader extends StatelessWidget {
                 icon: Icons.casino,
                 label: randomLabel,
                 fg: scheme.primary,
-                onTap: onRandom,
+                onTap: randomEnabled ? onRandom : null,
                 bg: extras.pillBg,
+                enabled: randomEnabled,
               ),
             ],
           ),
@@ -289,13 +314,15 @@ class _PillIconButton extends StatelessWidget {
   final String label;
   final Color fg;
   final Color bg;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool enabled;
   const _PillIconButton({
     required this.icon,
     required this.label,
     required this.fg,
     required this.bg,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
@@ -310,11 +337,18 @@ class _PillIconButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: fg),
+              Icon(
+                icon,
+                size: 18,
+                color: enabled ? fg : fg.withValues(alpha: .4),
+              ),
               const SizedBox(width: 8),
               Text(
                 label,
-                style: TextStyle(color: fg, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: enabled ? fg : fg.withValues(alpha: .4),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

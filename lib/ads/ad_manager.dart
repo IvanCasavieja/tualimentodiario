@@ -68,7 +68,7 @@ class AppOpenAdManager {
     // Evitar recargas innecesarias si hay uno fresco disponible
     if (_isAdAvailable && _isAdFresh()) return;
     _loadCompleter = Completer<void>();
-    debugPrint('[Ads] Loading AppOpenAd (unit: ' + adUnitId + ')...');
+    debugPrint('[Ads] Loading AppOpenAd (unit: $adUnitId)...');
     AppOpenAd.load(
       adUnitId: adUnitId,
       request: const AdRequest(),
@@ -90,7 +90,7 @@ class AppOpenAdManager {
             Future.delayed(Duration(milliseconds: 800 * _retryAttempts), loadAd);
           }
           // Fallback a interstitial si el ad unit no coincide con App Open
-          if (error.code == 3 && (error.message?.contains("doesn't match format") ?? false)) {
+          if (error.code == 3 && error.message.contains("doesn't match format")) {
             debugPrint('[Ads] Falling back to InterstitialAd due to format mismatch');
             loadInterstitial();
           }
@@ -157,7 +157,7 @@ class AppOpenAdManager {
   // ---------------- Interstitial fallback ----------------
   void loadInterstitial() {
     if (_interstitialAd != null) return;
-    debugPrint('[Ads] Loading InterstitialAd (unit: ' + interstitialAdUnitId + ')...');
+    debugPrint('[Ads] Loading InterstitialAd (unit: $interstitialAdUnitId)...');
     _interstitialLoadCompleter = Completer<void>();
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,

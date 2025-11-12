@@ -1,4 +1,4 @@
-ï»¿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_state.dart'; // AppLang, languageProvider
 
 class Strings {
@@ -38,7 +38,7 @@ class Strings {
   final String adminPanel;
   final String logout;
 
-  // Extras usados en diÃ¡logos (detalle)
+  // Extras usados en diálogos (detalle)
   final String close;
   final String prayerTitle;
   final String scrollHint;
@@ -87,36 +87,36 @@ const _es = Strings(
   navArchive: 'Archivo',
   navFavorites: 'Favoritos',
   navProfile: 'Perfil',
-  headerDailyFood: 'Alimento del dÃ­a',
+  headerDailyFood: 'Alimento del día',
   headerSurprise: 'Sorpresa',
   headerSubtitle:
-      'ElegÃ­ cÃ³mo te sentÃ­s hoy. Te llevo al archivo con los resultados.',
+      'Elegí cómo te sentís hoy. Te llevo al archivo con los resultados.',
   archiveTitle: 'Archivo',
   filterFrom: 'Desde (yyyy-MM-dd)',
   filterTo: 'Hasta (yyyy-MM-dd)',
   filterBtn: 'Filtrar',
   noResults: 'No hay resultados',
   favoritesTitle: 'Favoritos',
-  favoritesNeedLogin: 'IniciÃ¡ sesiÃ³n para ver tus favoritos',
-  favoritesEmpty: 'No tenÃ©s favoritos aÃºn',
+  favoritesNeedLogin: 'Iniciá sesión para ver tus favoritos',
+  favoritesEmpty: 'No tenés favoritos aún',
   profileTitle: 'Perfil',
   guest: 'Invitado',
-  guestHint: 'PodÃ©s crear tu cuenta o iniciar sesiÃ³n desde aquÃ­.',
+  guestHint: 'Podés crear tu cuenta o iniciar sesión desde aquí.',
   googleSignIn: 'Continuar con Google',
-  emailSignIn: 'Iniciar sesiÃ³n con email',
+  emailSignIn: 'Iniciar sesión con email',
   emailRegister: 'Crear cuenta con email',
   email: 'Email',
-  password: 'ContraseÃ±a',
+  password: 'Contraseña',
   cancel: 'Cancelar',
   create: 'Crear',
   enter: 'Entrar',
   language: 'Idioma',
   adminUpload: 'Subir alimento diario',
-  adminPanel: 'Panel de administraciÃ³n',
-  logout: 'Cerrar sesiÃ³n',
+  adminPanel: 'Panel de administración',
+  logout: 'Cerrar sesión',
   close: 'Cerrar',
-  prayerTitle: 'OraciÃ³n',
-  scrollHint: 'DeslizÃ¡ para ver mÃ¡s',
+  prayerTitle: 'Oración',
+  scrollHint: 'Deslizá para ver más',
 );
 
 const _en = Strings(
@@ -158,26 +158,26 @@ const _en = Strings(
 );
 
 const _pt = Strings(
-  appTitle: 'Seu Alimento DiÃ¡rio',
-  navHome: 'InÃ­cio',
+  appTitle: 'Seu Alimento Diário',
+  navHome: 'Início',
   navArchive: 'Arquivo',
   navFavorites: 'Favoritos',
   navProfile: 'Perfil',
   headerDailyFood: 'Alimento do dia',
   headerSurprise: 'Surpresa',
   headerSubtitle:
-      'Escolha como vocÃª se sente hoje. Levo vocÃª ao arquivo com os resultados.',
+      'Escolha como você se sente hoje. Levo você ao arquivo com os resultados.',
   archiveTitle: 'Arquivo',
   filterFrom: 'De (yyyy-MM-dd)',
-  filterTo: 'AtÃ© (yyyy-MM-dd)',
+  filterTo: 'Até (yyyy-MM-dd)',
   filterBtn: 'Filtrar',
   noResults: 'Sem resultados',
   favoritesTitle: 'Favoritos',
-  favoritesNeedLogin: 'FaÃ§a login para ver seus favoritos',
-  favoritesEmpty: 'VocÃª ainda nÃ£o tem favoritos',
+  favoritesNeedLogin: 'Faça login para ver seus favoritos',
+  favoritesEmpty: 'Você ainda não tem favoritos',
   profileTitle: 'Perfil',
   guest: 'Convidado',
-  guestHint: 'VocÃª pode criar uma conta ou fazer login aqui.',
+  guestHint: 'Você pode criar uma conta ou fazer login aqui.',
   googleSignIn: 'Continuar com Google',
   emailSignIn: 'Entrar com e-mail',
   emailRegister: 'Criar conta com e-mail',
@@ -187,11 +187,11 @@ const _pt = Strings(
   create: 'Criar',
   enter: 'Entrar',
   language: 'Idioma',
-  adminUpload: 'Enviar alimento diÃ¡rio',
-  adminPanel: 'Painel de administraÃ§Ã£o',
+  adminUpload: 'Enviar alimento diário',
+  adminPanel: 'Painel de administração',
   logout: 'Sair',
   close: 'Fechar',
-  prayerTitle: 'OraÃ§Ã£o',
+  prayerTitle: 'Oração',
   scrollHint: 'Deslize para ver mais',
 );
 
@@ -246,5 +246,6 @@ final stringsProvider = Provider<Strings>((ref) {
       return _es;
   }
 });
+
 
 

@@ -119,3 +119,4 @@ class FavoritesView extends ConsumerWidget {
     );
   }
 }
+

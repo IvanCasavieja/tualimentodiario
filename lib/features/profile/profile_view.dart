@@ -344,7 +344,7 @@ class _LanguageDropdown extends ConsumerWidget {
           items: const [
             DropdownMenuItem(value: AppLang.es, child: Text('Español')),
             DropdownMenuItem(value: AppLang.en, child: Text('English')),
-            DropdownMenuItem(value: AppLang.pt, child: Text('PortuguÃªs')),
+            DropdownMenuItem(value: AppLang.pt, child: Text('Português')),
             DropdownMenuItem(value: AppLang.it, child: Text('Italiano')),
           ],
         ),
@@ -423,6 +423,8 @@ class _PreferencesCard extends ConsumerWidget {
     );
   }
 }
+
+
 
 
 

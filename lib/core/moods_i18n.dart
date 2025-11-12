@@ -1,4 +1,4 @@
-// lib/core/moods_i18n.dart
+﻿// lib/core/moods_i18n.dart
 /// i18n centralizado para los labels de moods.
 /// Claves: slug -> { 'es'|'en'|'pt'|'it' : labelTraducido }
 const Map<String, Map<String, String>> kMoodI18n = {
@@ -11,7 +11,7 @@ const Map<String, Map<String, String>> kMoodI18n = {
   'gratitud': {
     'es': 'Gratitud',
     'en': 'Gratitude',
-    'pt': 'Gratidão',
+    'pt': 'GratidÃ£o',
     'it': 'Gratitudine',
   },
   'fortaleza': {
@@ -34,23 +34,23 @@ const Map<String, Map<String, String>> kMoodI18n = {
     'pt': 'Sabedoria',
     'it': 'Saggezza',
   },
-  'fe': {'es': 'Fe', 'en': 'Faith', 'pt': 'Fé', 'it': 'Fede'},
+  'fe': {'es': 'Fe', 'en': 'Faith', 'pt': 'FÃ©', 'it': 'Fede'},
   'perdon': {
     'es': 'Perdón',
     'en': 'Forgiveness',
-    'pt': 'Perdão',
+    'pt': 'PerdÃ£o',
     'it': 'Perdono',
   },
   'paciencia': {
     'es': 'Paciencia',
     'en': 'Patience',
-    'pt': 'Paciência',
+    'pt': 'PaciÃªncia',
     'it': 'Pazienza',
   },
 };
 
 /// Devuelve el label traducido para el slug dado.
-/// - [fallbackLabel] se usa si no hay traducción para ese idioma.
+/// - [fallbackLabel] se usa si no hay traducciÃ³n para ese idioma.
 /// - [langCode] debe ser 'es'|'en'|'pt'|'it'.
 String moodLabelI18n({
   required String slug,
@@ -64,3 +64,5 @@ String moodLabelI18n({
   }
   return fallbackLabel;
 }
+
+

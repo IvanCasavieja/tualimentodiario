@@ -25,7 +25,7 @@ const kMoods = <MoodDef>[
   MoodDef('paz', 'Paz', Icons.self_improvement_outlined, Color(0xFF6C4DF5)),
   MoodDef(
     'alegria',
-    'AlegrÃ­a',
+    'Alegría',
     Icons.emoji_emotions_outlined,
     Color(0xFF48C1F1),
   ),
@@ -37,12 +37,12 @@ const kMoods = <MoodDef>[
   ),
   MoodDef(
     'sabiduria',
-    'SabidurÃ­a',
+    'Sabiduría',
     Icons.psychology_outlined,
     Color(0xFF48C1F1),
   ),
   MoodDef('fe', 'Fe', Icons.auto_fix_high, Color(0xFF6C4DF5)),
-  MoodDef('perdon', 'PerdÃ³n', Icons.handshake_outlined, Color(0xFF48C1F1)),
+  MoodDef('perdon', 'Perdón', Icons.handshake_outlined, Color(0xFF48C1F1)),
   MoodDef('paciencia', 'Paciencia', Icons.hourglass_empty, Color(0xFF6C4DF5)),
 ];
 
@@ -56,7 +56,7 @@ MoodDef? moodBySlug(String slug) {
   }
 }
 
-/// Chips SOLO para Home â€“ ahora traducidos con la misma fuente que Admin.
+/// Chips SOLO para Home (ahora traducidos con la misma fuente que Admin).
 class MoodChips extends ConsumerWidget {
   const MoodChips({super.key});
 
@@ -131,3 +131,4 @@ class MoodChips extends ConsumerWidget {
     );
   }
 }
+
