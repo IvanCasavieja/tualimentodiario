@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,6 +7,7 @@ import '../../core/app_state.dart'; // languageProvider, AppLang
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/providers.dart'; // authServiceProvider, authStateProvider, userIsAdminProvider
 import '../../core/tema.dart'; // themeModeProvider, textScaleProvider, ThemePrefs
+import '../../core/prefs_i18n.dart';
 import '../admin/admin_upload_view.dart';
 
 class ProfileView extends ConsumerWidget {
@@ -67,7 +68,7 @@ class _GuestProfile extends ConsumerWidget {
                 await auth.signInWithGoogle();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sesión iniciada con Google')),
+                    SnackBar(content: Text(prefsTextsOf(ref.read(languageProvider)).googleSignedIn)),
                   );
                 }
               } on FirebaseAuthException catch (e) {
@@ -146,7 +147,7 @@ class _GuestProfile extends ConsumerWidget {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(e.message ?? 'Error de autenticación'),
+                      content: Text(e.message ?? 'Error de autenticaciÃ³n'),
                     ),
                   );
                 }
@@ -343,7 +344,7 @@ class _LanguageDropdown extends ConsumerWidget {
           items: const [
             DropdownMenuItem(value: AppLang.es, child: Text('Español')),
             DropdownMenuItem(value: AppLang.en, child: Text('English')),
-            DropdownMenuItem(value: AppLang.pt, child: Text('Português')),
+            DropdownMenuItem(value: AppLang.pt, child: Text('PortuguÃªs')),
             DropdownMenuItem(value: AppLang.it, child: Text('Italiano')),
           ],
         ),
@@ -352,7 +353,7 @@ class _LanguageDropdown extends ConsumerWidget {
   }
 }
 
-/// Preferencias globales: modo oscuro + tamaño de texto.
+/// Preferencias globales: modo oscuro + Tamaño de texto.
 /// Se conecta a los providers globales de tema.
 class _PreferencesCard extends ConsumerWidget {
   const _PreferencesCard();
@@ -370,18 +371,18 @@ class _PreferencesCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const ListTile(
+            ListTile(
               dense: true,
               leading: Icon(Icons.settings),
-              title: Text('Preferencias'),
-              subtitle: Text('Afectan a toda la aplicación'),
+              title: Text(prefsTextsOf(ref.watch(languageProvider)).title),
+              subtitle: Text(prefsTextsOf(ref.watch(languageProvider)).subtitle),
             ),
             const Divider(height: 0),
 
             // Modo oscuro
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Modo oscuro'),
+              title: Text(prefsTextsOf(ref.watch(languageProvider)).darkMode),
               value: isDark,
               onChanged: (v) async {
                 final newMode = v ? ThemeMode.dark : ThemeMode.light;
@@ -396,7 +397,7 @@ class _PreferencesCard extends ConsumerWidget {
               dense: true,
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.text_fields),
-              title: const Text('Tamaño de texto'),
+              title: Text(prefsTextsOf(ref.watch(languageProvider)).textSize),
               subtitle: Slider(
                 min: 0.9,
                 max: 1.4,
@@ -422,3 +423,7 @@ class _PreferencesCard extends ConsumerWidget {
     );
   }
 }
+
+
+
+

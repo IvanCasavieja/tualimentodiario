@@ -90,7 +90,7 @@ const _es = Strings(
   headerDailyFood: 'Alimento del día',
   headerSurprise: 'Sorpresa',
   headerSubtitle:
-      'Elegí cómo te sentís hoy. Te llevo al Archivo con los resultados.',
+      'Elegí cómo te sentís hoy. Te llevo al archivo con los resultados.',
   archiveTitle: 'Archivo',
   filterFrom: 'Desde (yyyy-MM-dd)',
   filterTo: 'Hasta (yyyy-MM-dd)',
@@ -101,7 +101,7 @@ const _es = Strings(
   favoritesEmpty: 'No tenés favoritos aún',
   profileTitle: 'Perfil',
   guest: 'Invitado',
-  guestHint: 'Podés crear tu cuenta o iniciar sesión desde acá.',
+  guestHint: 'Podés crear tu cuenta o iniciar sesión desde aquí.',
   googleSignIn: 'Continuar con Google',
   emailSignIn: 'Iniciar sesión con email',
   emailRegister: 'Crear cuenta con email',
@@ -128,7 +128,7 @@ const _en = Strings(
   headerDailyFood: 'Daily Food',
   headerSurprise: 'Random',
   headerSubtitle:
-      'Choose how you feel today. I’ll take you to the Archive with results.',
+      "Choose how you feel today. I'll take you to the Archive with results.",
   archiveTitle: 'Archive',
   filterFrom: 'From (yyyy-MM-dd)',
   filterTo: 'To (yyyy-MM-dd)',
@@ -166,7 +166,7 @@ const _pt = Strings(
   headerDailyFood: 'Alimento do dia',
   headerSurprise: 'Surpresa',
   headerSubtitle:
-      'Escolha como você se sente hoje. Levo você ao Arquivo com os resultados.',
+      'Escolha como você se sente hoje. Levo você ao arquivo com os resultados.',
   archiveTitle: 'Arquivo',
   filterFrom: 'De (yyyy-MM-dd)',
   filterTo: 'Até (yyyy-MM-dd)',
@@ -204,7 +204,7 @@ const _it = Strings(
   headerDailyFood: 'Cibo del giorno',
   headerSurprise: 'Sorpresa',
   headerSubtitle:
-      'Scegli come ti senti oggi. Ti porto all’Archivio con i risultati.',
+      "Scegli come ti senti oggi. Ti porto all'archivio con i risultati.",
   archiveTitle: 'Archivio',
   filterFrom: 'Da (yyyy-MM-dd)',
   filterTo: 'A (yyyy-MM-dd)',
@@ -246,3 +246,4 @@ final stringsProvider = Provider<Strings>((ref) {
       return _es;
   }
 });
+

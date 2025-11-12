@@ -7,35 +7,44 @@ import 'package:intl/intl.dart';
 
 import '../../core/providers.dart'; // userIsAdminProvider
 import '../../core/app_state.dart'; // languageProvider
+import '../../core/i18n.dart'; // stringsProvider
 import '../../core/moods_i18n.dart'
     show moodLabelI18n; // <-- usar la misma traducciÃ³n que Home
 import '../common/moods.dart' show kMoods; // lista de moods (slug, icon, color)
 
+// Vista de administración para crear y publicar el "Alimento Diario".
+// - Soporta pestañas por idioma (es, en, pt, it).
+// - Permite seleccionar hasta 3 moods y valida campos requeridos.
+// - Publica en Firestore (colección `dailyFoods`) con metadatos básicos.
+
+/// Pantalla principal del panel de carga del Alimento Diario.
 class AdminUploadView extends ConsumerStatefulWidget {
   const AdminUploadView({super.key});
   @override
   ConsumerState<AdminUploadView> createState() => _AdminUploadViewState();
 }
 
+// Estado de la pantalla: controla pestañas, validaciones y envío a Firestore.
 class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     with TickerProviderStateMixin {
   // Idiomas / tabs
   static const langs = ['es', 'en', 'pt', 'it'];
   static const langLabels = {
-    'es': 'EspaÃ±ol',
+    'es': 'Español',
     'en': 'English',
-    'pt': 'PortuguÃªs',
+    'pt': 'Português',
     'it': 'Italiano',
   };
 
   // Despedidas fijas
   static const Map<String, String> kFarewells = {
-    'es': 'Bendecido DÃ­a',
+    'es': 'Bendecido Día',
     'en': 'Blessed day',
-    'pt': 'Dia abenÃ§oado',
+    'pt': 'Dia abençoado',
     'it': 'Giorno benedetto',
   };
 
+  // Controlador de pestañas para alternar entre idiomas.
   late final TabController _tabs = TabController(
     length: langs.length,
     vsync: this,
@@ -44,7 +53,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   /// Publicamos directo (sin switch)
   final bool _isPublished = true;
 
-  /// SelecciÃ³n de moods (mÃ¡x. 3) â€“ GUARDAREMOS SLUGS EN ESPAÃ‘OL
+  /// SelecciÃ³n de Moods (máx. 3) â€“ GUARDAREMOS SLUGS EN Español
   final Set<String> _selectedMoods = {};
 
   /// Pasos completados (por idioma)
@@ -109,14 +118,14 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     if (_isLangValid(lang)) {
       setState(() => _completed.add(lang));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Paso ${langLabels[lang]} completado âœ“')),
+        SnackBar(content: Text('Paso \\ completado ?')),
       );
     } else {
       _tabs.index = langs.indexOf(lang);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'CompletÃ¡ VersÃ­culo, al menos 1 pÃ¡rrafo y la OraciÃ³n en ${langLabels[lang]}',
+            'Completá Versículo, al menos 1 párrafo y la Oración en ',
           ),
         ),
       );
@@ -315,15 +324,16 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
         .watch(languageProvider)
         .name; // por si lo necesitÃ¡s en UI
 
+    final t = ref.watch(stringsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Subir alimento diario')),
+      appBar: AppBar(title: Text(t.adminUpload)),
       body: isAdminAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (isAdmin) {
           if (!isAdmin) {
             return const Center(
-              child: Text('No tenÃ©s permisos para acceder a este panel.'),
+              child: Text('No tenés permisos para acceder a este panel.'),
             );
           }
           final completedCount = _completed.length;
@@ -344,7 +354,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                   onTap: _openMoodSelector,
                   child: InputDecorator(
                     decoration: InputDecoration(
-                      labelText: 'Moods (mÃ¡x. 3)',
+                      labelText: 'Moods (máx. 3)',
                       border: const OutlineInputBorder(),
                       suffixIcon: Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -355,7 +365,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
                       ),
                     ),
                     child: _selectedMoods.isEmpty
-                        ? const Text('TocÃ¡ para seleccionar')
+                        ? const Text('Toca para seleccionar')
                         : Wrap(
                             spacing: 8,
                             runSpacing: -6,
@@ -577,7 +587,7 @@ class _LangForm extends StatelessWidget {
   String _title(String lang) {
     switch (lang) {
       case 'es':
-        return 'EspaÃ±ol';
+        return 'Español';
       case 'en':
         return 'English';
       case 'pt':
@@ -588,6 +598,10 @@ class _LangForm extends StatelessWidget {
     return lang;
   }
 }
+
+
+
+
 
 
 

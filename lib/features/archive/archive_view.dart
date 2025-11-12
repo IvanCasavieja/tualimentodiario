@@ -10,6 +10,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../core/app_state.dart'; // languageProvider, selectedFoodIdProvider
 import '../../core/models/daily_food.dart';
 import '../../core/ui_utils.dart'; // ellipsize
+import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../../core/i18n.dart'; // stringsProvider
 import '../common/food_detail_dialog.dart';
 import '../common/favorite_heart.dart';
@@ -649,7 +650,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        verse,
+                                        normalizeDisplayText(verse),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
@@ -659,7 +660,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
-                                        ellipsize(description, 130),
+                                        ellipsize(normalizeDisplayText(description), 130),
                                         style: textTheme.bodyMedium?.copyWith(
                                           color:
                                               Theme.of(context).brightness ==

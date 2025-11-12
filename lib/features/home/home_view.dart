@@ -12,6 +12,7 @@ import '../../core/app_state.dart'
         bottomTabIndexProvider;
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/tema.dart'; // AppExtras
+import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
 
@@ -378,7 +379,7 @@ class _FoodCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      verse,
+                      normalizeDisplayText(verse),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: text.titleMedium?.copyWith(
@@ -387,7 +388,7 @@ class _FoodCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      description,
+                      normalizeDisplayText(description),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: text.bodyMedium?.copyWith(

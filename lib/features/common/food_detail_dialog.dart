@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/models/daily_food.dart';
 import '../../core/ui_utils.dart';
+import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../../core/i18n.dart'; // stringsProvider
 import '../common/favorite_heart.dart';
 
@@ -92,10 +93,12 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
 
     final item = widget.item;
     final tr = _pickLang(Map<String, dynamic>.from(item.translations));
-    final verse = (tr['verse'] ?? '').toString().trim();
-    final description = (tr['description'] ?? '').toString().trim();
-    final prayer = (tr['prayer'] ?? '').toString().trim();
-    final reflection = (tr['reflection'] ?? '').toString().trim();
+    final verse = normalizeDisplayText((tr['verse'] ?? '').toString().trim());
+    final description =
+        normalizeDisplayText((tr['description'] ?? '').toString().trim());
+    final prayer = normalizeDisplayText((tr['prayer'] ?? '').toString().trim());
+    final reflection =
+        normalizeDisplayText((tr['reflection'] ?? '').toString().trim());
     final farewell = langFarewell(widget.lang);
 
     final meta = (item.date.isNotEmpty) ? _formatDate(item.date) : '';
@@ -166,7 +169,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                           children: [
                             if (description.isNotEmpty) ...[
                               Text(
-                                description,
+                                normalizeDisplayText(description),
                                 textAlign: TextAlign.left,
                                 style: const TextStyle(
                                   fontSize: 15,
@@ -177,7 +180,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                             ],
                             if (reflection.isNotEmpty) ...[
                               Text(
-                                reflection,
+                                normalizeDisplayText(reflection),
                                 textAlign: TextAlign.left,
                                 style: const TextStyle(
                                   fontSize: 15,
@@ -196,7 +199,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                prayer,
+                                normalizeDisplayText(prayer),
                                 textAlign: TextAlign.left,
                                 style: const TextStyle(
                                   fontSize: 15,
