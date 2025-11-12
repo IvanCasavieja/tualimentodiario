@@ -26,12 +26,10 @@ class _SplashViewState extends State<SplashView> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Text(
-          'Tu Alimento Diario',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-          textAlign: TextAlign.center,
+        child: Image.asset(
+          'assets/logo_sin_fondo.png',
+          width: 220,
+          fit: BoxFit.contain,
         ),
       ),
     );
