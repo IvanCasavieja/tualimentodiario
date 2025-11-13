@@ -119,7 +119,7 @@ class NavScaffold extends ConsumerStatefulWidget {
 
 class _NavScaffoldState extends ConsumerState<NavScaffold> {
   // Lista de pÃ¡ginas en el mismo orden que las pestaÃ±as.
-  final pages = [
+  static const pages = [
     HomeView(),
     ArchiveView(),
     FavoritesView(),

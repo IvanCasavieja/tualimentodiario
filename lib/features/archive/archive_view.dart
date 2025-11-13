@@ -1,22 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../core/app_state.dart'; // languageProvider, selectedFoodIdProvider
 import '../../core/models/daily_food.dart';
 import '../../core/ui_utils.dart'; // ellipsize
 import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../../core/i18n.dart'; // stringsProvider
+import '../../core/share_helper.dart';
 import '../common/food_detail_dialog.dart';
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
-
-const String kInstallUrl = 'https://example.com/tu_alimento_diario';
 
 class ArchiveView extends ConsumerStatefulWidget {
   final String? initialFoodId;
@@ -390,138 +385,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
-  // ================= COMPARTIR =================
-
-  String _buildShareText({
-    required String verse,
-    required String description,
-    required String dateStr,
-  }) {
-    final datePretty = _formatDate(dateStr);
-    final headerByLang = {
-      'es': 'Alimento Diario $datePretty',
-      'en': 'Daily Food $datePretty',
-      'pt': 'Alimento Diário $datePretty',
-      'it': 'Cibo Quotidiano $datePretty',
-    };
-    final header = headerByLang[_langCode] ?? 'Alimento Diario $datePretty';
-
-    final parts = <String>[
-      header,
-      verse.trim().isEmpty ? '—' : verse.trim(),
-      if (description.trim().isNotEmpty) description.trim(),
-      'Descargá la app: $kInstallUrl',
-    ];
-    return parts.where((s) => s.isNotEmpty).join('\n\n');
-  }
-
-  Future<void> _shareToWhatsApp(String text) async {
-    final uri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(text)}');
-    try {
-      final ok = await canLaunchUrl(uri);
-      if (ok) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await SharePlus.instance.share(ShareParams(text: text)); // fallback
-      }
-    } catch (_) {
-      await SharePlus.instance.share(ShareParams(text: text)); // fallback
-    }
-  }
-
-  Future<void> _shareGeneric(String text) async {
-    await SharePlus.instance.share(ShareParams(text: text));
-  }
-
-  void _openShareSheet({
-    required BuildContext context,
-    required String verse,
-    required String description,
-    required String dateStr,
-  }) {
-    final text = _buildShareText(
-      verse: verse,
-      description: description,
-      dateStr: dateStr,
-    );
-
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const FaIcon(
-                  FontAwesomeIcons.whatsapp,
-                  color: Color(0xFF25D366),
-                ),
-                title: const Text('Compartir por WhatsApp'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _shareToWhatsApp(text);
-                },
-              ),
-              ListTile(
-                leading: const FaIcon(
-                  FontAwesomeIcons.instagram,
-                  color: Color(0xFFE1306C),
-                ),
-                title: const Text('Compartir en Instagram'),
-                subtitle: const Text('Usa el menú del sistema (texto)'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _shareGeneric(text);
-                },
-              ),
-              ListTile(
-                leading: const FaIcon(
-                  FontAwesomeIcons.facebook,
-                  color: Color(0xFF1877F2),
-                ),
-                title: const Text('Compartir en Facebook'),
-                subtitle: const Text('Usa el menú del sistema (texto)'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _shareGeneric(text);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.ios_share),
-                title: const Text('Más opciones'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _shareGeneric(text);
-                },
-              ),
-              const SizedBox(height: 6),
-              TextButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: text));
-                  if (mounted) {
-                    // ignore: use_build_context_synchronously
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Texto copiado al portapapeles'),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.copy),
-                label: const Text('Copiar texto'),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   // ============================================
 
@@ -775,8 +638,9 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                                 ),
                                                 tooltip: 'Compartir',
                                                 onPressed: () {
-                                                  _openShareSheet(
+                                                  ShareHelper.openShareSheet(
                                                     context: context,
+                                                    langCode: _langCode,
                                                     verse: verse,
                                                     description: description,
                                                     dateStr: dateStr,

@@ -6,6 +6,7 @@ import '../../core/models/daily_food.dart';
 import '../../core/ui_utils.dart';
 import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../../core/i18n.dart'; // stringsProvider
+import '../../core/share_helper.dart';
 import '../common/favorite_heart.dart';
 
 class FoodDetailDialog extends ConsumerStatefulWidget {
@@ -133,6 +134,20 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                   ),
                   const SizedBox(width: 8),
                   FavoriteHeart(foodId: item.id, iconSize: 24),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.ios_share),
+                    tooltip: 'Compartir',
+                    onPressed: () {
+                      ShareHelper.openShareSheet(
+                        context: context,
+                        langCode: widget.lang,
+                        verse: verse,
+                        description: description,
+                        dateStr: item.date,
+                      );
+                    },
+                  ),
                   const SizedBox(width: 6),
                   IconButton(
                     icon: const Icon(Icons.close),

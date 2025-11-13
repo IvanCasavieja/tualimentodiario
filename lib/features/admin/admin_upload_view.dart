@@ -35,6 +35,8 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     'it': 'Giorno benedetto',
   };
 
+  static final DateFormat _dateFormatter = DateFormat('yyyy-MM-dd');
+
   late final TabController _tabs = TabController(length: langs.length, vsync: this);
 
   final bool _isPublished = true;
@@ -54,11 +56,17 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   @override
   void dispose() {
     _tabs.dispose();
-    for (final c in _verse.values) c.dispose();
-    for (final list in _paragraphs.values) {
-      for (final c in list) c.dispose();
+    for (final c in _verse.values) {
+      c.dispose();
     }
-    for (final c in _prayer.values) c.dispose();
+    for (final list in _paragraphs.values) {
+      for (final c in list) {
+        c.dispose();
+      }
+    }
+    for (final c in _prayer.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -229,7 +237,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       };
     }
 
-    final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final dateStr = _dateFormatter.format(DateTime.now());
     final dataToSend = {
       'date': dateStr,
       'authorUid': user.uid,
@@ -427,8 +435,8 @@ class _LangForm extends StatelessWidget {
         const SizedBox(height: 12),
 
         // Despedida fija (read-only)
-        TextField(
-          controller: TextEditingController(text: farewellText),
+        TextFormField(
+          initialValue: farewellText,
           enabled: false,
           decoration: const InputDecoration(labelText: 'Despedida (fija)'),
         ),
