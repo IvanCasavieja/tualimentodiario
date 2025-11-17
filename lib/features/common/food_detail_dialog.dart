@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,6 +31,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
   bool _ttsReady = false;
   bool _isSpeaking = false;
   bool _isConfiguringTts = false;
+  static const double _kMaxSpeechVolume = 1.0;
 
   late final AnimationController _hintAnim = AnimationController(
     vsync: this,
@@ -74,6 +76,12 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     super.dispose();
   }
 
+  void _logTts(String message) {
+    if (kDebugMode) {
+      debugPrint('[TTS] $message');
+    }
+  }
+
   String? _lastTtsError;
 
   Future<void> _configureTts() async {
@@ -84,22 +92,22 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
       await _tts.setLanguage(locale);
       await _tts.setSpeechRate(0.72);
       await _tts.setPitch(1.0);
-      await _tts.setVolume(1.0);
+      await _tts.setVolume(_kMaxSpeechVolume);
       try {
         await _tts.awaitSpeakCompletion(true);
       } catch (e) {
-        debugPrint('[TTS] awaitSpeakCompletion no soportado: $e');
+        _logTts('awaitSpeakCompletion no soportado: $e');
       }
       if (mounted) setState(() => _ttsReady = true);
       _lastTtsError = null;
     } on PlatformException catch (e) {
-      debugPrint('[TTS] Platform error: ${e.code} - ${e.message}');
+      _logTts('Platform error: ${e.code} - ${e.message}');
       _lastTtsError = e.code == 'no_engine'
           ? 'No hay motor de voz instalado. Instala Speech Services by Google.'
           : e.message;
       if (mounted) setState(() => _ttsReady = false);
     } catch (e) {
-      debugPrint('[TTS] Error: $e');
+      _logTts('Error: $e');
       _lastTtsError = e.toString();
       if (mounted) setState(() => _ttsReady = false);
     } finally {
@@ -112,7 +120,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
       if (mounted) setState(() => _isSpeaking = false);
     });
     _tts.setErrorHandler((msg) {
-      debugPrint('[TTS] error handler: $msg');
+      _logTts('error handler: $msg');
       if (mounted) setState(() => _isSpeaking = false);
     });
   }
@@ -146,7 +154,13 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     if (text.trim().isEmpty) return;
     setState(() => _isSpeaking = true);
     await _tts.stop();
+    await _tts.setVolume(_kMaxSpeechVolume); // máximo permitido por el motor
     await _tts.speak(text);
+  }
+
+  Future<void> _closeDialog() async {
+    await _stopSpeech(silent: true);
+    if (mounted) Navigator.of(context).maybePop();
   }
 
   Future<void> _stopSpeech({bool silent = false}) async {
@@ -179,7 +193,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
           await _tts.isLanguageAvailable(desired) ?? false;
       if (isDesiredAvailable) return desired;
     } catch (e) {
-      debugPrint('[TTS] isLanguageAvailable failed: $e');
+      _logTts('isLanguageAvailable failed: $e');
     }
     const fallbacks = ['es-ES', 'en-US', 'pt-BR', 'it-IT'];
     for (final code in fallbacks) {
@@ -273,11 +287,13 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     final verse = normalizeDisplayText((tr['verse'] ?? '').toString().trim());
     final title = normalizeDisplayText((tr['title'] ?? '').toString().trim());
     final headerText = title.isNotEmpty ? title : verse;
-    final description =
-        normalizeDisplayText((tr['description'] ?? '').toString().trim());
+    final description = normalizeDisplayText(
+      (tr['description'] ?? '').toString().trim(),
+    );
     final prayer = normalizeDisplayText((tr['prayer'] ?? '').toString().trim());
-    final reflection =
-        normalizeDisplayText((tr['reflection'] ?? '').toString().trim());
+    final reflection = normalizeDisplayText(
+      (tr['reflection'] ?? '').toString().trim(),
+    );
     final farewell = langFarewell(widget.lang);
     final speechText = _buildSpeechText(
       header: headerText,
@@ -298,230 +314,238 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     final maxHeight = mq.size.height * 0.82;
     final contentScrollMaxHeight = (maxHeight - 140).clamp(140.0, 800.0);
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      headerText.isEmpty ? '---' : headerText,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FavoriteHeart(foodId: item.id, iconSize: 24),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: Icon(
-                      _isSpeaking ? Icons.stop_circle : Icons.volume_up,
-                    ),
-                    tooltip: _isSpeaking
-                        ? 'Detener lectura'
-                        : 'Escuchar contenido',
-                    onPressed: () => _handleSpeechTap(speechText),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(Icons.ios_share),
-                    tooltip: 'Compartir',
-                    onPressed: () {
-                      ShareHelper.openShareSheet(
-                        context: context,
-                        title: headerText,
-                        langCode: widget.lang,
-                        verse: verse,
-                        description: description,
-                        dateStr: item.date,
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 6),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    tooltip: t.close,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                ],
-              ),
-              if (meta.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    meta,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-              ],
-              if (title.isNotEmpty && verse.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    verse,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: Colors.grey.shade700,
-                        ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 10),
-
-              // Content with scroll
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: contentScrollMaxHeight),
-                child: Stack(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) async {
+        await _stopSpeech(silent: true);
+      },
+      child: Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Scrollbar(
-                      controller: _scrollCtrl,
-                      thumbVisibility: false,
-                      child: SingleChildScrollView(
-                        controller: _scrollCtrl,
-                        padding: const EdgeInsets.only(right: 6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (description.isNotEmpty) ...[
-                              Text(
-                                normalizeDisplayText(description),
-                                textAlign: TextAlign.left,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  height: 1.35,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            if (reflection.isNotEmpty) ...[
-                              Text(
-                                normalizeDisplayText(reflection),
-                                textAlign: TextAlign.left,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  height: 1.35,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            if (prayer.isNotEmpty) ...[
-                              Text(
-                                t.prayerTitle,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                normalizeDisplayText(prayer),
-                                textAlign: TextAlign.left,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  height: 1.35,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            Text(
-                              '$farewell.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context).colorScheme.primary,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
+                    Expanded(
+                      child: Text(
+                        headerText.isEmpty ? '---' : headerText,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-
-                    // Scroll hint
-                    if (_canScroll && !_atEnd) ...[
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: IgnorePointer(
-                          child: Container(
-                            height: 36,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  (Theme.of(
-                                            context,
-                                          ).dialogTheme.backgroundColor ??
-                                          Colors.white)
-                                      .withValues(alpha: 0.0),
-                                  (Theme.of(
-                                            context,
-                                          ).dialogTheme.backgroundColor ??
-                                          Colors.white)
-                                      .withValues(alpha: 0.9),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                    const SizedBox(width: 8),
+                    FavoriteHeart(foodId: item.id, iconSize: 24),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: Icon(
+                        _isSpeaking ? Icons.stop_circle : Icons.volume_up,
                       ),
-                      Positioned(
-                        bottom: 6,
-                        left: 0,
-                        right: 0,
-                        child: IgnorePointer(
-                          child: AnimatedBuilder(
-                            animation: _hintAnim,
-                            builder: (context, _) {
-                              return Transform.translate(
-                                offset: Offset(0, _hintOffset.value),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.keyboard_arrow_down,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      t.scrollHint,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.7),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
+                      tooltip: _isSpeaking
+                          ? 'Detener lectura'
+                          : 'Escuchar contenido',
+                      onPressed: () => _handleSpeechTap(speechText),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.ios_share),
+                      tooltip: 'Compartir',
+                      onPressed: () {
+                        ShareHelper.openShareSheet(
+                          context: context,
+                          title: headerText,
+                          langCode: widget.lang,
+                          verse: verse,
+                          description: description,
+                          dateStr: item.date,
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: t.close,
+                      onPressed: _closeDialog,
+                    ),
                   ],
                 ),
-              ),
+                if (meta.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      meta,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                ],
+                if (title.isNotEmpty && verse.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      verse,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
 
-              const SizedBox(height: 10),
-            ],
+                // Content with scroll
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: contentScrollMaxHeight,
+                  ),
+                  child: Stack(
+                    children: [
+                      Scrollbar(
+                        controller: _scrollCtrl,
+                        thumbVisibility: false,
+                        child: SingleChildScrollView(
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (description.isNotEmpty) ...[
+                                Text(
+                                  normalizeDisplayText(description),
+                                  textAlign: TextAlign.left,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (reflection.isNotEmpty) ...[
+                                Text(
+                                  normalizeDisplayText(reflection),
+                                  textAlign: TextAlign.left,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (prayer.isNotEmpty) ...[
+                                Text(
+                                  t.prayerTitle,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  normalizeDisplayText(prayer),
+                                  textAlign: TextAlign.left,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              Text(
+                                '$farewell.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Scroll hint
+                      if (_canScroll && !_atEnd) ...[
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: IgnorePointer(
+                            child: Container(
+                              height: 36,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    (Theme.of(
+                                              context,
+                                            ).dialogTheme.backgroundColor ??
+                                            Colors.white)
+                                        .withValues(alpha: 0.0),
+                                    (Theme.of(
+                                              context,
+                                            ).dialogTheme.backgroundColor ??
+                                            Colors.white)
+                                        .withValues(alpha: 0.9),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 6,
+                          left: 0,
+                          right: 0,
+                          child: IgnorePointer(
+                            child: AnimatedBuilder(
+                              animation: _hintAnim,
+                              builder: (context, _) {
+                                return Transform.translate(
+                                  offset: Offset(0, _hintOffset.value),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.keyboard_arrow_down,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        t.scrollHint,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
         ),
       ),

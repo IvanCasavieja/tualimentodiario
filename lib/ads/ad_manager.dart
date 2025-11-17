@@ -11,6 +11,12 @@ const String kReleaseAppOpenId = String.fromEnvironment('APP_OPEN_AD_UNIT_ID');
 const String kReleaseInterstitialId =
     String.fromEnvironment('INTERSTITIAL_AD_UNIT_ID');
 
+void _log(String message) {
+  if (kDebugMode) {
+    debugPrint('[Ads] $message');
+  }
+}
+
 /// Gestiona la carga y muestra de App Open Ads (pantalla completa al inicio).
 class AppOpenAdManager {
   AppOpenAd? _appOpenAd;
@@ -68,7 +74,7 @@ class AppOpenAdManager {
     // Evitar recargas innecesarias si hay uno fresco disponible
     if (_isAdAvailable && _isAdFresh()) return;
     _loadCompleter = Completer<void>();
-    debugPrint('[Ads] Loading AppOpenAd (unit: $adUnitId)...');
+    _log('Loading AppOpenAd (unit: $adUnitId)...');
     AppOpenAd.load(
       adUnitId: adUnitId,
       request: const AdRequest(),
@@ -78,12 +84,12 @@ class AppOpenAdManager {
           _loadTime = DateTime.now();
           _loadCompleter?.complete();
           _retryAttempts = 0;
-          debugPrint('[Ads] AppOpenAd loaded');
+          _log('AppOpenAd loaded');
         },
         onAdFailedToLoad: (error) {
           _appOpenAd = null;
           _loadCompleter?.complete();
-          debugPrint('[Ads] AppOpenAd failed to load: ${error.code} - ${error.message}');
+          _log('AppOpenAd failed to load: ${error.code} - ${error.message}');
           // Reintento simple con backoff limitado para mejorar probabilidad de carga
           if (_retryAttempts < 2) {
             _retryAttempts++;
@@ -91,7 +97,7 @@ class AppOpenAdManager {
           }
           // Fallback a interstitial si el ad unit no coincide con App Open
           if (error.code == 3 && error.message.contains("doesn't match format")) {
-            debugPrint('[Ads] Falling back to InterstitialAd due to format mismatch');
+            _log('Falling back to InterstitialAd due to format mismatch');
             loadInterstitial();
           }
         },
@@ -118,12 +124,12 @@ class AppOpenAdManager {
         _isShowingAd = false;
         ad.dispose();
         _appOpenAd = null;
-        debugPrint('[Ads] AppOpenAd failed to show: ${error.code} - ${error.message}');
+        _log('AppOpenAd failed to show: ${error.code} - ${error.message}');
         loadAd();
       },
       onAdShowedFullScreenContent: (ad) {
         _isShowingAd = true;
-        debugPrint('[Ads] AppOpenAd showed');
+        _log('AppOpenAd showed');
       },
     );
 
@@ -157,7 +163,7 @@ class AppOpenAdManager {
   // ---------------- Interstitial fallback ----------------
   void loadInterstitial() {
     if (_interstitialAd != null) return;
-    debugPrint('[Ads] Loading InterstitialAd (unit: $interstitialAdUnitId)...');
+    _log('Loading InterstitialAd (unit: $interstitialAdUnitId)...');
     _interstitialLoadCompleter = Completer<void>();
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
@@ -166,7 +172,7 @@ class AppOpenAdManager {
         onAdLoaded: (ad) {
           _interstitialAd = ad;
           _interstitialLoadCompleter?.complete();
-          debugPrint('[Ads] InterstitialAd loaded');
+          _log('InterstitialAd loaded');
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               _isShowingInterstitial = false;
@@ -175,20 +181,20 @@ class AppOpenAdManager {
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               _isShowingInterstitial = false;
-              debugPrint('[Ads] Interstitial failed to show: ${error.code} - ${error.message}');
+              _log('Interstitial failed to show: ${error.code} - ${error.message}');
               ad.dispose();
               _interstitialAd = null;
             },
             onAdShowedFullScreenContent: (ad) {
               _isShowingInterstitial = true;
-              debugPrint('[Ads] Interstitial showed');
+              _log('Interstitial showed');
             },
           );
         },
         onAdFailedToLoad: (error) {
           _interstitialAd = null;
           _interstitialLoadCompleter?.complete();
-          debugPrint('[Ads] InterstitialAd failed to load: ${error.code} - ${error.message}');
+          _log('InterstitialAd failed to load: ${error.code} - ${error.message}');
         },
       ),
     );

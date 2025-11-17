@@ -119,7 +119,6 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
     final scheme = Theme.of(context).colorScheme;
     final extras = Theme.of(context).extension<AppExtras>()!;
-    final text = Theme.of(context).textTheme; // ignore: unused_local_variable
 
     return Container(
       // fondo según tema (mantiene tu estilo en claro)

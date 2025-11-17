@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart'; // authStateProvider, isFavoriteProvider
 import '../../core/firestore_repository.dart'; // FS
+import '../../core/i18n.dart';
 
 class FavoriteHeart extends ConsumerWidget {
   const FavoriteHeart({super.key, required this.foodId, this.iconSize = 24});
@@ -12,6 +13,7 @@ class FavoriteHeart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(stringsProvider);
     final user = ref.watch(authStateProvider).value;
     if (user == null) {
       return IconButton(
@@ -20,7 +22,7 @@ class FavoriteHeart extends ConsumerWidget {
         icon: const Icon(Icons.favorite_border),
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Iniciá sesión para usar favoritos.')),
+            SnackBar(content: Text(t.favoritesNeedLogin)),
           );
         },
       );

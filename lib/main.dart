@@ -1,44 +1,48 @@
-﻿// Archivo principal: configura Firebase, Riverpod y navegaciÃ³n base.
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
+// Archivo principal: configura Firebase, Riverpod y la navegación base.
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'ads/ad_manager.dart';
 import 'core/app_state.dart';
 import 'core/i18n.dart'; // stringsProvider
-import 'core/tema.dart'; // themeModeProvider, textScaleProvider, ThemePrefs, buildLightTheme, buildDarkTheme
-import 'features/home/home_view.dart';
+import 'core/tema.dart'; // ThemeMode, escala de texto y temas Light/Dark
+import 'debug/log_observer.dart';
 import 'features/archive/archive_view.dart';
 import 'features/favorites/favorites_view.dart';
-import 'package:tu_alimento_diario/features/profile/profile_view.dart';
-import 'debug/log_observer.dart';
+import 'features/home/home_view.dart';
+import 'features/profile/profile_view.dart';
 import 'features/splash/splash_view.dart';
-import 'ads/ad_manager.dart';
 
-/// Punto de entrada de la app: inicializa Firebase, sesiÃ³n y preferencias.
+const bool kEnableRiverpodLogs = false;
+const Duration kAppOpenShowTimeout = Duration(seconds: 4);
+
+/// Punto de entrada de la app: inicializa Firebase, sesión y preferencias.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Inicializa los servicios de Firebase
-  // Inicializa el SDK de Google Mobile Ads (AdMob) y precarga App Open Ad
+  await Firebase.initializeApp();
   await MobileAds.instance.initialize();
   AppOpenAdManager.instance.loadAd();
 
-  // SesiÃ³n anÃ³nima si no hay usuario
+  // Inicia una sesión anónima si no existe un usuario actual.
   if (FirebaseAuth.instance.currentUser == null) {
     await FirebaseAuth.instance.signInAnonymously();
   }
 
-  // Carga de preferencias persistidas (idioma, tema y escala de texto)
+  // Carga de preferencias persistidas (idioma, tema y escala de texto).
   final savedLang = await LanguagePrefs.load();
-  final (savedMode, savedScale) = await ThemePrefs.load(); // ThemeMode + double
+  final (savedMode, savedScale) = await ThemePrefs.load();
+  final observers = kEnableRiverpodLogs
+      ? <ProviderObserver>[LogObserver()]
+      : const <ProviderObserver>[];
 
   runApp(
     ProviderScope(
-      observers: [LogObserver()], // Observa cambios de estado para debug
+      observers: observers,
       overrides: [
-        // Inyecta estados iniciales desde preferencias persistidas
         languageProvider.overrideWith((ref) => savedLang),
         themeModeProvider.overrideWith((ref) => savedMode),
         textScaleProvider.overrideWith((ref) => savedScale),
@@ -48,19 +52,17 @@ Future<void> main() async {
   );
 }
 
-/// Widget raÃ­z de la app. Escucha providers para i18n y tema.
+/// Widget raíz de la app. Escucha providers para i18n y tema.
 class App extends ConsumerWidget {
   const App({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Estados reactivos leÃ­dos de Riverpod
     final lang = ref.watch(languageProvider);
     final t = ref.watch(stringsProvider);
     final mode = ref.watch(themeModeProvider);
     final scale = ref.watch(textScaleProvider);
 
-    // ConfiguraciÃ³n principal del MaterialApp
     return MaterialApp(
       title: t.appTitle,
       debugShowCheckedModeBanner: false,
@@ -72,30 +74,25 @@ class App extends ConsumerWidget {
         Locale('it'),
       ],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-
-      // â¬‡â¬‡ IMPORTANTE: temas que incluyen AppExtras
-      // Temas claro/oscuro de la app (con AppExtras)
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: mode,
-
-      // Aplica textScale globalmente para accesibilidad/tamaÃ±o de texto
+      // Aplica textScale global para accesibilidad y tamaño de texto.
       builder: (context, child) {
         final mq = MediaQuery.of(context);
         return MediaQuery(
           data: mq.copyWith(textScaler: TextScaler.linear(scale)),
-          child: child!,
+          child: child ?? const SizedBox.shrink(),
         );
       },
-      // Vista raÃ­z con navegaciÃ³n inferior por pestaÃ±as
-      home: const SplashView(),
+      home: const SplashView(), // Vista raíz con navegación inferior por tabs.
       routes: {
         '/home': (_) => const NavScaffold(),
       },
     );
   }
 
-  /// Convierte AppLang a su cÃ³digo de idioma (ej: es, en, pt, it)
+  /// Convierte AppLang a su código de idioma (ej: es, en, pt, it).
   String _toCode(AppLang l) {
     switch (l) {
       case AppLang.en:
@@ -110,15 +107,16 @@ class App extends ConsumerWidget {
   }
 }
 
-/// Scaffold principal con navegaciÃ³n inferior y conservaciÃ³n de estado.
+/// Scaffold principal con navegación inferior y conservación de estado.
 class NavScaffold extends ConsumerStatefulWidget {
   const NavScaffold({super.key});
+
   @override
   ConsumerState<NavScaffold> createState() => _NavScaffoldState();
 }
 
 class _NavScaffoldState extends ConsumerState<NavScaffold> {
-  // Lista de pÃ¡ginas en el mismo orden que las pestaÃ±as.
+  // Lista de páginas en el mismo orden que las pestañas.
   static const pages = [
     HomeView(),
     ArchiveView(),
@@ -127,17 +125,26 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final current = ref.read(bottomTabIndexProvider);
+      if (current == 0) {
+        AppOpenAdManager.instance
+            .showOnLaunch(timeout: kAppOpenShowTimeout);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Ãndice actual de la pestaÃ±a activa (estado global)
     final idx = ref.watch(bottomTabIndexProvider);
     final t = ref.watch(stringsProvider);
 
     return Scaffold(
-      // Mantiene el estado de las pÃ¡ginas no visibles
       body: IndexedStack(index: idx, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: idx,
-        // Cambia la pestaÃ±a seleccionada actualizando el provider
         onDestinationSelected: (i) =>
             ref.read(bottomTabIndexProvider.notifier).state = i,
         destinations: [
@@ -165,23 +172,4 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
       ),
     );
   }
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final current = ref.read(bottomTabIndexProvider);
-      if (current == 0) {
-        AppOpenAdManager.instance
-            .showOnLaunch(timeout: const Duration(seconds: 4));
-      }
-    });
-  }
-
 }
-
-
-
-
-
-
-

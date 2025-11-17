@@ -113,7 +113,7 @@ class ShareHelper {
                   color: Color(0xFFE1306C),
                 ),
                 title: const Text('Compartir en Instagram'),
-                subtitle: const Text('Usa el menǧ del sistema (texto)'),
+                subtitle: const Text('Usá el menú del sistema (texto)'),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _shareGeneric(text);
@@ -125,7 +125,7 @@ class ShareHelper {
                   color: Color(0xFF1877F2),
                 ),
                 title: const Text('Compartir en Facebook'),
-                subtitle: const Text('Usa el menǧ del sistema (texto)'),
+                subtitle: const Text('Usá el menú del sistema (texto)'),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _shareGeneric(text);

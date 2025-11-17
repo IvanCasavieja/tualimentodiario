@@ -901,34 +901,3 @@ class _Paginator extends StatelessWidget {
     );
   }
 }
-/*
-  void _enqueueOpenById(String id) {
-    _queuedOpenId = id; // coalesce: nos quedamos con el último
-    if (!_openingById) {
-      _processOpenQueue();
-    }
-  }
-
-  Future<void> _processOpenQueue() async {
-    _openingById = true;
-    try {
-      while (_queuedOpenId != null) {
-        final id = _queuedOpenId!;
-        _queuedOpenId = null;
-        // Evita competir con cargas de página en curso
-        await _waitWhileLoading();
-        await _openById(id);
-        // Limpia la selección para evitar reaperturas
-        ref.read(selectedFoodIdProvider.notifier).state = null;
-      }
-    } finally {
-      _openingById = false;
-    }
-  }
-
-  Future<void> _waitWhileLoading() async {
-    while (_loading) {
-      await Future.delayed(const Duration(milliseconds: 16));
-    }
-  }
-*/

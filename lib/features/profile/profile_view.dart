@@ -115,12 +115,13 @@ class _GuestProfile extends ConsumerWidget {
     final passCtrl = TextEditingController();
     final messenger = ScaffoldMessenger.maybeOf(context);
 
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isRegister ? t.emailRegister : t.emailSignIn),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+    try {
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(isRegister ? t.emailRegister : t.emailSignIn),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: emailCtrl,
@@ -189,7 +190,7 @@ class _GuestProfile extends ConsumerWidget {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(e.message ?? 'Error de autenticaciÃ³n'),
+                      content: Text(e.message ?? 'Error de autenticación'),
                     ),
                   );
                 }
@@ -199,7 +200,11 @@ class _GuestProfile extends ConsumerWidget {
           ),
         ],
       ),
-    );
+      );
+    } finally {
+      emailCtrl.dispose();
+      passCtrl.dispose();
+    }
   }
 }
 
