@@ -8,7 +8,6 @@ import '../../core/app_state.dart'
     show
         AppLang,
         languageProvider,
-        selectedFoodIdProvider,
         bottomTabIndexProvider;
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/tema.dart'; // AppExtras
@@ -96,6 +95,14 @@ class _HomeViewState extends ConsumerState<HomeView> {
     }
   }
 
+  void _openDailyFood(DailyFood item, String lang) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => FoodDetailDialog(item: item, lang: lang),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appLang = ref.watch(languageProvider);
@@ -113,7 +120,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
         backgroundColor: Colors.transparent,
         appBar: AppBar(centerTitle: true, title: Text(t.appTitle)),
         body: SafeArea(
-          child: StreamBuilder<QuerySnapshot>(
+          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: _latest5Query().snapshots(),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
@@ -138,13 +145,12 @@ class _HomeViewState extends ConsumerState<HomeView> {
                   ),
                   const SizedBox(height: 12),
                   ...docs.map((d) {
-                    final data = d.data() as Map<String, dynamic>;
+                    final data = d.data();
                     final id = d.id;
                     final dt = _parseDate(data['date']);
+                    final item = DailyFood.fromDoc(d);
                     final translations =
-                        (data['translations'] as Map?)
-                            ?.cast<String, dynamic>() ??
-                        {};
+                        item.translations;
                     final tr = _pickLangMap(
                       translations,
                       primary: langCode,
@@ -161,10 +167,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
                       verse: verse,
                       description: description,
                       date: dt,
-                      onOpen: () {
-                        ref.read(selectedFoodIdProvider.notifier).state = id;
-                        ref.read(bottomTabIndexProvider.notifier).state = 1;
-                      },
+                      onOpen: () => _openDailyFood(item, langCode),
                       // colores desde esquema
                       accent: scheme.tertiary,
                     );
