@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../../ads/ad_manager.dart';
+
 /// Pantalla de precarga simple que muestra el nombre de la app.
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -13,6 +15,11 @@ class _SplashViewState extends State<SplashView> {
   @override
   void initState() {
     super.initState();
+    // Arranca la carga del App Open Ad mientras se muestra esta splash.
+    unawaited(
+      AppOpenAdManager.instance
+          .waitForAvailability(timeout: const Duration(seconds: 4)),
+    );
     // Espera corto para que el usuario vea el nombre y luego navega al Home.
     // El App Open Ad se intentará mostrar al entrar al Home.
     Timer(const Duration(milliseconds: 400), () async {

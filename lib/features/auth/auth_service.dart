@@ -31,6 +31,10 @@ class AuthService {
     );
   }
 
+  Future<void> sendPasswordReset(String email) {
+    return _fa.sendPasswordResetEmail(email: email.trim());
+  }
+
   /// Google Sign In (Android / iOS / Web)
   Future<UserCredential> signInWithGoogle() async {
     if (kIsWeb) {

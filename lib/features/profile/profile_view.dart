@@ -9,6 +9,7 @@ import '../../core/providers.dart'; // authServiceProvider, authStateProvider, u
 import '../../core/tema.dart'; // themeModeProvider, textScaleProvider, ThemePrefs
 import '../../core/prefs_i18n.dart';
 import '../admin/admin_upload_view.dart';
+import 'feedback_view.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
@@ -61,6 +62,9 @@ class _GuestProfile extends ConsumerWidget {
 
           const _PreferencesCard(),
 
+          const SizedBox(height: 16),
+          const _FeedbackCard(),
+
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: () async {
@@ -109,6 +113,7 @@ class _GuestProfile extends ConsumerWidget {
     final auth = ref.read(authServiceProvider);
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
+    final messenger = ScaffoldMessenger.maybeOf(context);
 
     await showDialog(
       context: context,
@@ -127,6 +132,43 @@ class _GuestProfile extends ConsumerWidget {
               obscureText: true,
               decoration: InputDecoration(labelText: t.password),
             ),
+            if (!isRegister)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () async {
+                    final email = emailCtrl.text.trim();
+                    if (email.isEmpty) {
+                      messenger?.showSnackBar(
+                        SnackBar(content: Text(t.resetEmailMissing)),
+                      );
+                      return;
+                    }
+                    try {
+                      final providers = await FirebaseAuth.instance
+                          .fetchSignInMethodsForEmail(email); // ignore: deprecated_member_use
+                      if (!providers.contains('password')) {
+                        messenger?.showSnackBar(SnackBar(
+                          content: Text(t.resetEmailFederated),
+                        ));
+                        return;
+                      }
+                      await auth.sendPasswordReset(email);
+                      messenger?.showSnackBar(
+                        SnackBar(content: Text(t.resetEmailSent)),
+                      );
+                    } on FirebaseAuthException catch (e) {
+                      messenger?.showSnackBar(
+                        SnackBar(
+                          content:
+                              Text(e.message ?? t.resetEmailError),
+                        ),
+                      );
+                    }
+                  },
+                  child: Text(t.forgotPassword),
+                ),
+              ),
           ],
         ),
         actions: [
@@ -217,6 +259,9 @@ class _UserProfileState extends ConsumerState<_UserProfile> {
           const SizedBox(height: 16),
 
           const _PreferencesCard(),
+
+          const SizedBox(height: 16),
+          const _FeedbackCard(),
 
           const SizedBox(height: 24),
 
@@ -313,6 +358,29 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FeedbackCard extends ConsumerWidget {
+  const _FeedbackCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(stringsProvider);
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: const Icon(Icons.feedback_outlined),
+        title: Text(t.feedbackTitle),
+        subtitle: Text(t.feedbackSubtitle),
+        trailing: const Icon(Icons.keyboard_arrow_right),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const FeedbackView()),
+          );
+        },
+      ),
     );
   }
 }
@@ -423,6 +491,8 @@ class _PreferencesCard extends ConsumerWidget {
     );
   }
 }
+
+
 
 
 

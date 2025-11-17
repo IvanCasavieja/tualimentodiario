@@ -16,6 +16,7 @@ import '../common/favorite_heart.dart';
 import '../common/moods.dart';
 import '../../core/models/daily_food.dart';
 import '../common/food_detail_dialog.dart';
+import '../../core/share_helper.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
@@ -49,12 +50,16 @@ class _HomeViewState extends ConsumerState<HomeView> {
     super.dispose();
   }
 
-  Query<Map<String, dynamic>> _latest5Query() => FirebaseFirestore.instance
-      .collection('dailyFoods')
-      .where('isPublished', isEqualTo: true)
-      .orderBy('date', descending: true)
-      .orderBy(FieldPath.documentId, descending: true)
-      .limit(5);
+  Query<Map<String, dynamic>> _latest5Query() {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return FirebaseFirestore.instance
+        .collection('dailyFoods')
+        .where('isPublished', isEqualTo: true)
+        .where('date', isLessThanOrEqualTo: today)
+        .orderBy('date', descending: true)
+        .orderBy(FieldPath.documentId, descending: true)
+        .limit(5);
+  }
 
   Future<void> _openRandom() async {
     if (_randomInFlight) return;
@@ -66,12 +71,15 @@ class _HomeViewState extends ConsumerState<HomeView> {
       final endMonth = DateTime(now.year, 10, 31);
       final startStr = DateFormat('yyyy-MM-dd').format(startMonth);
       final endStr = DateFormat('yyyy-MM-dd').format(endMonth);
+      final todayStr = DateFormat('yyyy-MM-dd').format(now);
+      final effectiveEnd =
+          todayStr.compareTo(endStr) < 0 ? todayStr : endStr;
 
       final snap = await FirebaseFirestore.instance
           .collection('dailyFoods')
           .where('isPublished', isEqualTo: true)
           .where('date', isGreaterThanOrEqualTo: startStr)
-          .where('date', isLessThanOrEqualTo: endStr)
+          .where('date', isLessThanOrEqualTo: effectiveEnd)
           .orderBy('date', descending: true)
           .orderBy(FieldPath.documentId, descending: true)
           .limit(100)
@@ -158,16 +166,30 @@ class _HomeViewState extends ConsumerState<HomeView> {
                     );
                     final verse =
                         (tr['verse'] as String?)?.trim().trimRight() ?? '—';
+                    final titleText =
+                        (tr['title'] as String?)?.trim().trimRight() ?? '';
+                    final headline =
+                        titleText.isNotEmpty ? titleText : verse;
                     final description =
                         (tr['description'] as String?)?.trim().trimRight() ??
                         '—';
 
                     return _FoodCard(
                       id: id,
-                      verse: verse,
+                      headline: headline,
                       description: description,
                       date: dt,
                       onOpen: () => _openDailyFood(item, langCode),
+                      onShare: () {
+                        ShareHelper.openShareSheet(
+                          context: context,
+                          title: headline,
+                          langCode: langCode,
+                          verse: verse,
+                          description: description,
+                          dateStr: data['date']?.toString() ?? '',
+                        );
+                      },
                       // colores desde esquema
                       accent: scheme.tertiary,
                     );
@@ -362,17 +384,19 @@ class _PillIconButton extends StatelessWidget {
 }
 
 class _FoodCard extends StatelessWidget {
-  final String id, verse, description;
+  final String id, headline, description;
   final DateTime date;
   final VoidCallback onOpen;
+  final VoidCallback onShare;
   final Color accent;
 
   const _FoodCard({
     required this.id,
-    required this.verse,
+    required this.headline,
     required this.description,
     required this.date,
     required this.onOpen,
+    required this.onShare,
     required this.accent,
   });
 
@@ -416,7 +440,7 @@ class _FoodCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      normalizeDisplayText(verse),
+                      normalizeDisplayText(headline),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: text.titleMedium?.copyWith(
@@ -447,6 +471,12 @@ class _FoodCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             FavoriteHeart(foodId: id, iconSize: 22),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.ios_share),
+                              tooltip: 'Compartir',
+                              onPressed: onShare,
+                            ),
                             const SizedBox(width: 4),
                             IconButton(
                               icon: const Icon(Icons.open_in_new),

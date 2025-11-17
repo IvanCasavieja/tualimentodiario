@@ -37,13 +37,18 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
 
   static final DateFormat _dateFormatter = DateFormat('yyyy-MM-dd');
 
-  late final TabController _tabs = TabController(length: langs.length, vsync: this);
+  late final TabController _tabs;
 
   final bool _isPublished = true;
   final Set<String> _selectedMoods = {};
-  final Set<String> _completed = {};
+  bool _isSubmitting = false;
+  bool _showScheduleStep = false;
+  DateTime _scheduledDate = _todayMidnight();
 
   final Map<String, TextEditingController> _verse = {
+    for (final l in langs) l: TextEditingController(),
+  };
+  final Map<String, TextEditingController> _title = {
     for (final l in langs) l: TextEditingController(),
   };
   final Map<String, List<TextEditingController>> _paragraphs = {
@@ -54,9 +59,24 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   };
 
   @override
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: langs.length, vsync: this)
+      ..addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    setState(() {});
+  }
+
+  @override
   void dispose() {
+    _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
     for (final c in _verse.values) {
+      c.dispose();
+    }
+    for (final c in _title.values) {
       c.dispose();
     }
     for (final list in _paragraphs.values) {
@@ -78,39 +98,18 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     if (_paragraphs[lang]!.length <= 1) return;
     final c = _paragraphs[lang]!.removeAt(idx);
     c.dispose();
-    setState(() => _completed.remove(lang));
-  }
-
-  void _markDirty(String lang) {
-    if (_completed.contains(lang)) setState(() => _completed.remove(lang));
+    setState(() {});
   }
 
   bool _isLangValid(String lang) {
     final v = _verse[lang]!.text.trim();
+    final ti = _title[lang]!.text.trim();
     final ps = _paragraphs[lang]!
         .map((c) => c.text.trim())
         .where((s) => s.isNotEmpty)
         .toList();
     final pr = _prayer[lang]!.text.trim();
-    return v.isNotEmpty && ps.isNotEmpty && pr.isNotEmpty;
-  }
-
-  void _validateAndComplete(String lang) {
-    if (_isLangValid(lang)) {
-      setState(() => _completed.add(lang));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Paso completado')),
-      );
-    } else {
-      _tabs.index = langs.indexOf(lang);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Completá Versículo, al menos 1 párrafo y la Oración en ${langLabels[lang]}',
-          ),
-        ),
-      );
-    }
+    return v.isNotEmpty && ti.isNotEmpty && ps.isNotEmpty && pr.isNotEmpty;
   }
 
   Future<void> _openMoodSelector() async {
@@ -211,10 +210,9 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
 
     for (final l in langs) {
       if (!_isLangValid(l)) {
-        _tabs.index = langs.indexOf(l);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Falta completar ${langLabels[l]}')),
-        );
+        final idx = langs.indexOf(l);
+        _tabs.animateTo(idx);
+        _showIncompleteMessage(l);
         return;
       }
     }
@@ -222,6 +220,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     final Map<String, dynamic> translations = {};
     for (final l in langs) {
       final verse = _verse[l]!.text.trim();
+      final title = _title[l]!.text.trim();
       final paragraphs = _paragraphs[l]!
           .map((c) => c.text.trim())
           .where((s) => s.isNotEmpty)
@@ -230,6 +229,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       final prayer = _prayer[l]!.text.trim();
       translations[l] = {
         'verse': verse,
+        'title': title,
         'description': description,
         'prayer': prayer,
         'farewell': kFarewells[l] ?? '',
@@ -237,7 +237,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       };
     }
 
-    final dateStr = _dateFormatter.format(DateTime.now());
+    final dateStr = _dateFormatter.format(_scheduledDate);
     final dataToSend = {
       'date': dateStr,
       'authorUid': user.uid,
@@ -282,52 +282,124 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
   }
 
   Widget _buildForm(BuildContext context) {
-    return DefaultTabController(
-      length: langs.length,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Row(
-              children: [
-                FilledButton.icon(
-                  onPressed: _openMoodSelector,
-                  icon: const Icon(Icons.emoji_emotions_outlined),
-                  label: Text('Moods (${_selectedMoods.length}/3)'),
+    final isFinalStep = _showScheduleStep;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          child: Row(
+            children: [
+              FilledButton.icon(
+                onPressed: _openMoodSelector,
+                icon: const Icon(Icons.emoji_emotions_outlined),
+                label: Text('Moods (${_selectedMoods.length}/3)'),
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: _isSubmitting ? null : _handlePrimaryAction,
+                icon: Icon(
+                  isFinalStep ? Icons.cloud_upload : Icons.arrow_forward,
                 ),
-                const Spacer(),
-                FilledButton.icon(
-                  onPressed: _submit,
-                  icon: const Icon(Icons.cloud_upload),
-                  label: const Text('Publicar'),
-                ),
-              ],
-            ),
+                label: Text(isFinalStep ? 'Publicar' : 'Siguiente'),
+              ),
+            ],
           ),
-          TabBar(
-            controller: _tabs,
-            isScrollable: true,
-            tabs: langs.map((l) => Tab(text: langLabels[l])).toList(),
+        ),
+        if (!_showScheduleStep) ...[
+          IgnorePointer(
+            child: TabBar(
+              controller: _tabs,
+              isScrollable: true,
+              tabs: langs.map((l) => Tab(text: langLabels[l])).toList(),
+            ),
           ),
           Expanded(
             child: TabBarView(
               controller: _tabs,
+              physics: const NeverScrollableScrollPhysics(),
               children: langs.map((l) {
                 return _LangForm(
                   lang: l,
                   verse: _verse[l]!,
+                  title: _title[l]!,
                   paragraphs: _paragraphs[l]!,
                   prayer: _prayer[l]!,
                   farewellText: kFarewells[l] ?? '',
                   onAddParagraph: () => _addParagraph(l),
                   onRemoveParagraph: (i) => _removeParagraph(l, i),
-                  onDirty: () => _markDirty(l),
-                  onValidateAndComplete: () => _validateAndComplete(l),
                 );
               }).toList(),
             ),
           ),
+        ] else ...[
+          Expanded(
+            child: _ScheduleStep(
+              selectedDate: _scheduledDate,
+              onPickDate: _pickDate,
+            ),
+          ),
         ],
+      ],
+    );
+  }
+
+  void _handlePrimaryAction() async {
+    if (!_showScheduleStep) {
+      final currentLang = langs[_tabs.index];
+      if (!_isLangValid(currentLang)) {
+        _showIncompleteMessage(currentLang);
+        return;
+      }
+      if (_tabs.index < langs.length - 1) {
+        _tabs.animateTo(_tabs.index + 1);
+        return;
+      }
+      setState(() => _showScheduleStep = true);
+      return;
+    }
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    await _submit();
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _scheduledDate,
+      firstDate: DateTime(DateTime.now().year - 5),
+      lastDate: DateTime(DateTime.now().year + 3),
+    );
+    if (picked != null) {
+      setState(() => _scheduledDate = _normalizeDate(picked));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Se publicará el ${DateFormat('dd/MM/yyyy').format(_scheduledDate)} a las 00:00.',
+          ),
+        ),
+      );
+    }
+  }
+
+  static DateTime _todayMidnight() {
+    final now = DateTime.now();
+    return _normalizeDate(now);
+  }
+
+  static DateTime _normalizeDate(DateTime d) =>
+      DateTime(d.year, d.month, d.day);
+
+  void _showIncompleteMessage(String lang) {
+    final name = langLabels[lang] ?? lang;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Completa versiculo, Titular, al menos 1 parrafo y la Oracion en $name',
+        ),
       ),
     );
   }
@@ -336,62 +408,54 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
 class _LangForm extends StatelessWidget {
   final String lang;
   final TextEditingController verse;
+  final TextEditingController title;
   final List<TextEditingController> paragraphs;
   final TextEditingController prayer;
   final String farewellText;
   final VoidCallback onAddParagraph;
   final void Function(int idx) onRemoveParagraph;
-  final VoidCallback onDirty;
-  final VoidCallback onValidateAndComplete;
 
   const _LangForm({
     required this.lang,
     required this.verse,
+    required this.title,
     required this.paragraphs,
     required this.prayer,
     required this.farewellText,
     required this.onAddParagraph,
     required this.onRemoveParagraph,
-    required this.onDirty,
-    required this.onValidateAndComplete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final badge = paragraphs.any((c) => c.text.trim().isNotEmpty) &&
-            verse.text.trim().isNotEmpty &&
-            prayer.text.trim().isNotEmpty
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              SizedBox(width: 6),
-              Icon(Icons.verified, size: 16, color: Colors.green),
-            ],
-          )
-        : const SizedBox.shrink();
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
         Row(
           children: [
             Text('Paso: ${_title(lang)}', style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(width: 6),
-            badge,
           ],
         ),
         const SizedBox(height: 12),
 
-        // Versículo
+        // Versiculo
         TextField(
           controller: verse,
-          onChanged: (_) => onDirty(),
-          decoration: const InputDecoration(labelText: 'Versículo'),
+          maxLines: null,
+          decoration: const InputDecoration(labelText: 'Versiculo'),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
-        const Text('Párrafos (Descripción)', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
+        // Titular
+        TextField(
+          controller: title,
+          maxLines: null,
+          decoration: const InputDecoration(labelText: 'Titular'),
+        ),
+        const SizedBox(height: 16),
+
+        const Text('Parrafos (Descripcion)', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
         ...List.generate(paragraphs.length, (i) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -400,7 +464,6 @@ class _LangForm extends StatelessWidget {
                 Expanded(
                   child: TextField(
                     controller: paragraphs[i],
-                    onChanged: (_) => onDirty(),
                     maxLines: null,
                     decoration: InputDecoration(labelText: 'Párrafo ${i + 1}'),
                   ),
@@ -420,35 +483,24 @@ class _LangForm extends StatelessWidget {
           child: TextButton.icon(
             onPressed: onAddParagraph,
             icon: const Icon(Icons.add),
-            label: const Text('Agregar párrafo'),
-          ),
+            label: const Text('Agregar parrafo'),
         ),
-        const SizedBox(height: 8),
+        ),
+        const SizedBox(height: 16),
 
         // Oración (obligatoria)
         TextField(
           controller: prayer,
-          onChanged: (_) => onDirty(),
           maxLines: null,
-          decoration: const InputDecoration(labelText: 'Oración (obligatoria)'),
+          decoration: const InputDecoration(labelText: 'Oracion (obligatoria)'),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
         // Despedida fija (read-only)
         TextFormField(
           initialValue: farewellText,
           enabled: false,
           decoration: const InputDecoration(labelText: 'Despedida (fija)'),
-        ),
-        const SizedBox(height: 16),
-
-        Align(
-          alignment: Alignment.centerRight,
-          child: FilledButton.icon(
-            onPressed: onValidateAndComplete,
-            icon: const Icon(Icons.check_circle),
-            label: const Text('Marcar paso como completado'),
-          ),
         ),
       ],
     );
@@ -468,3 +520,51 @@ class _LangForm extends StatelessWidget {
     return lang;
   }
 }
+
+class _ScheduleStep extends StatelessWidget {
+  final DateTime selectedDate;
+  final VoidCallback onPickDate;
+  const _ScheduleStep({
+    required this.selectedDate,
+    required this.onPickDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final formatted = DateFormat('dd/MM/yyyy').format(selectedDate);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      children: [
+        const Text(
+          'Programación de fecha',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Elegí la fecha exacta en la que el alimento debe estar disponible. '
+          'Podés seleccionar fechas pasadas para cargar contenidos atrasados o fechas futuras para dejarlos programados.',
+        ),
+        const SizedBox(height: 24),
+        Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            leading: const Icon(Icons.event_available),
+            title: const Text('Fecha seleccionada'),
+            subtitle: Text(formatted),
+            trailing: FilledButton.tonalIcon(
+              onPressed: onPickDate,
+              icon: const Icon(Icons.edit_calendar),
+              label: const Text('Cambiar'),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Nota: el alimento se publicará automáticamente a las 00:00 (hora local) del día seleccionado y no estará visible antes.',
+          style: TextStyle(fontStyle: FontStyle.italic),
+        ),
+      ],
+    );
+  }
+}
+

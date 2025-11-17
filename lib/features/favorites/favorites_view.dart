@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/providers.dart'; // authStateProvider, favoritesIdsProvider
 import '../../core/firestore_repository.dart';
@@ -63,7 +64,14 @@ class FavoritesView extends ConsumerWidget {
                 return Center(child: Text('Error: ${snap.error}'));
               }
 
-              final docs = (snap.data ?? []).expand((e) => e.docs).toList();
+              final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+              final docs = (snap.data ?? [])
+                  .expand((e) => e.docs)
+                  .where((doc) {
+                    final rawDate = (doc.data()['date'] ?? '').toString();
+                    if (rawDate.isEmpty) return true;
+                    return rawDate.compareTo(todayStr) <= 0;
+                  }).toList();
               if (docs.isEmpty) {
                 return Center(child: Text(t.favoritesEmpty));
               }
@@ -84,16 +92,27 @@ class FavoritesView extends ConsumerWidget {
                         item.translations['es'] ??
                         {},
                   );
+                  final verse = (tr['verse'] ?? '').toString().trim();
+                  final title = (tr['title'] ?? '').toString().trim();
+                  final headline = title.isNotEmpty ? title : verse;
+                  final description =
+                      ellipsize((tr['description'] ?? '').toString(), 140);
+                  final subtitleBuffer = StringBuffer();
+                  if (verse.isNotEmpty && verse != headline) {
+                    subtitleBuffer.writeln(verse);
+                    subtitleBuffer.writeln();
+                  }
+                  subtitleBuffer
+                    ..writeln(description)
+                    ..write('${item.authorName} - ${item.date}');
                   return Card(
                     margin: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
                     ),
                     child: ListTile(
-                      title: Text((tr['verse'] ?? '').toString()),
-                      subtitle: Text(
-                        '${ellipsize((tr['description'] ?? '').toString(), 140)}\n${item.authorName} • ${item.date}',
-                      ),
+                      title: Text(headline),
+                      subtitle: Text(subtitleBuffer.toString()),
                       isThreeLine: true,
                       trailing: IconButton(
                         icon: const Icon(Icons.favorite),
@@ -119,4 +138,3 @@ class FavoritesView extends ConsumerWidget {
     );
   }
 }
-

@@ -49,9 +49,11 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   ProviderSubscription<Set<String>>? _moodsSub;
 
   Query<Map<String, dynamic>> _baseQuery() {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     return FirebaseFirestore.instance
         .collection('dailyFoods')
         .where('isPublished', isEqualTo: true)
+        .where('date', isLessThanOrEqualTo: today)
         .orderBy('date', descending: true)
         .orderBy(FieldPath.documentId, descending: true);
   }
@@ -550,6 +552,10 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                         fallback: 'es',
                       );
                       final verse = (tmap['verse'] as String?)?.trim() ?? '—';
+                      final titleText =
+                          (tmap['title'] as String?)?.trim() ?? '';
+                      final headline =
+                          titleText.isNotEmpty ? titleText : verse;
                       final description =
                           (tmap['description'] as String?)?.trim() ?? '';
                       final dateStr = (data['date'] as String?) ?? '';
@@ -591,7 +597,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        normalizeDisplayText(verse),
+                                        normalizeDisplayText(headline),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
@@ -641,6 +647,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                                   ShareHelper.openShareSheet(
                                                     context: context,
                                                     langCode: _langCode,
+                                                    title: titleText,
                                                     verse: verse,
                                                     description: description,
                                                     dateStr: dateStr,

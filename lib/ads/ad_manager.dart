@@ -51,7 +51,7 @@ class AppOpenAdManager {
     // Interstitial REAL
     if (kReleaseInterstitialId.isNotEmpty) return kReleaseInterstitialId;
     // Fallback por defecto: tu ID interstitial real
-    return 'ca-app-pub-8476168641501489/9536096653';
+    return 'ca-app-pub-8476168641501489/9530696653';
   }
 
   bool get _isAdAvailable => _appOpenAd != null;

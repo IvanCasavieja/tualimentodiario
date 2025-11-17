@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/models/daily_food.dart';
@@ -24,6 +26,10 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
   final _scrollCtrl = ScrollController();
   bool _canScroll = false;
   bool _atEnd = false;
+  final FlutterTts _tts = FlutterTts();
+  bool _ttsReady = false;
+  bool _isSpeaking = false;
+  bool _isConfiguringTts = false;
 
   late final AnimationController _hintAnim = AnimationController(
     vsync: this,
@@ -39,6 +45,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
+    _configureTts();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollCtrl.hasClients) return;
       final canScroll = _scrollCtrl.position.maxScrollExtent > 0;
@@ -63,7 +70,176 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     _hintAnim.dispose();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
+    _stopSpeech(silent: true);
     super.dispose();
+  }
+
+  String? _lastTtsError;
+
+  Future<void> _configureTts() async {
+    if (_isConfiguringTts) return;
+    _isConfiguringTts = true;
+    try {
+      final locale = await _resolveAvailableLocale();
+      await _tts.setLanguage(locale);
+      await _tts.setSpeechRate(0.72);
+      await _tts.setPitch(1.0);
+      await _tts.setVolume(1.0);
+      try {
+        await _tts.awaitSpeakCompletion(true);
+      } catch (e) {
+        debugPrint('[TTS] awaitSpeakCompletion no soportado: $e');
+      }
+      if (mounted) setState(() => _ttsReady = true);
+      _lastTtsError = null;
+    } on PlatformException catch (e) {
+      debugPrint('[TTS] Platform error: ${e.code} - ${e.message}');
+      _lastTtsError = e.code == 'no_engine'
+          ? 'No hay motor de voz instalado. Instala Speech Services by Google.'
+          : e.message;
+      if (mounted) setState(() => _ttsReady = false);
+    } catch (e) {
+      debugPrint('[TTS] Error: $e');
+      _lastTtsError = e.toString();
+      if (mounted) setState(() => _ttsReady = false);
+    } finally {
+      _isConfiguringTts = false;
+    }
+    _tts.setCompletionHandler(() {
+      if (mounted) setState(() => _isSpeaking = false);
+    });
+    _tts.setCancelHandler(() {
+      if (mounted) setState(() => _isSpeaking = false);
+    });
+    _tts.setErrorHandler((msg) {
+      debugPrint('[TTS] error handler: $msg');
+      if (mounted) setState(() => _isSpeaking = false);
+    });
+  }
+
+  Future<void> _handleSpeechTap(String text) async {
+    if (!_ttsReady) {
+      await _configureTts();
+      if (!_ttsReady) {
+        if (!mounted) return;
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(
+              _lastTtsError?.isNotEmpty == true
+                  ? 'No se pudo activar la lectura: $_lastTtsError'
+                  : 'No se pudo activar la lectura en voz alta.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+    await _toggleSpeech(text);
+  }
+
+  Future<void> _toggleSpeech(String text) async {
+    if (!_ttsReady) return;
+    if (_isSpeaking) {
+      await _stopSpeech();
+      return;
+    }
+    if (text.trim().isEmpty) return;
+    setState(() => _isSpeaking = true);
+    await _tts.stop();
+    await _tts.speak(text);
+  }
+
+  Future<void> _stopSpeech({bool silent = false}) async {
+    await _tts.stop();
+    if (mounted && !silent) {
+      setState(() => _isSpeaking = false);
+    } else if (silent) {
+      _isSpeaking = false;
+    }
+  }
+
+  String _ttsLocale(String lang) {
+    switch (lang) {
+      case 'en':
+        return 'en-US';
+      case 'pt':
+        return 'pt-BR';
+      case 'it':
+        return 'it-IT';
+      case 'es':
+      default:
+        return 'es-ES';
+    }
+  }
+
+  Future<String> _resolveAvailableLocale() async {
+    final desired = _ttsLocale(widget.lang);
+    try {
+      final isDesiredAvailable =
+          await _tts.isLanguageAvailable(desired) ?? false;
+      if (isDesiredAvailable) return desired;
+    } catch (e) {
+      debugPrint('[TTS] isLanguageAvailable failed: $e');
+    }
+    const fallbacks = ['es-ES', 'en-US', 'pt-BR', 'it-IT'];
+    for (final code in fallbacks) {
+      try {
+        final ok = await _tts.isLanguageAvailable(code) ?? false;
+        if (ok) return code;
+      } catch (_) {}
+    }
+    return 'en-US';
+  }
+
+  String _verseLabel(String lang) {
+    switch (lang) {
+      case 'en':
+        return 'Verse';
+      case 'pt':
+        return 'Versiculo';
+      case 'it':
+        return 'Versetto';
+      case 'es':
+      default:
+        return 'Versiculo';
+    }
+  }
+
+  String _reflectionLabel(String lang) {
+    switch (lang) {
+      case 'en':
+        return 'Reflection';
+      case 'pt':
+        return 'Reflexao';
+      case 'it':
+        return 'Riflessione';
+      case 'es':
+      default:
+        return 'Reflexion';
+    }
+  }
+
+  String _buildSpeechText({
+    required String header,
+    required String verse,
+    required String description,
+    required String prayer,
+    required String reflection,
+    required String farewell,
+    required String verseLabel,
+    required String prayerLabel,
+    required String reflectionLabel,
+  }) {
+    final parts = <String>[];
+    if (header.isNotEmpty) parts.add(header);
+    if (verse.isNotEmpty && verse != header) {
+      parts.add('$verseLabel: $verse');
+    }
+    if (description.isNotEmpty) parts.add(description);
+    if (prayer.isNotEmpty) parts.add('$prayerLabel: $prayer');
+    if (reflection.isNotEmpty) parts.add('$reflectionLabel: $reflection');
+    if (farewell.isNotEmpty) parts.add(farewell);
+    return parts.join('. ');
   }
 
   Map<String, dynamic> _pickLang(Map<String, dynamic> translations) {
@@ -95,12 +271,25 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     final item = widget.item;
     final tr = _pickLang(Map<String, dynamic>.from(item.translations));
     final verse = normalizeDisplayText((tr['verse'] ?? '').toString().trim());
+    final title = normalizeDisplayText((tr['title'] ?? '').toString().trim());
+    final headerText = title.isNotEmpty ? title : verse;
     final description =
         normalizeDisplayText((tr['description'] ?? '').toString().trim());
     final prayer = normalizeDisplayText((tr['prayer'] ?? '').toString().trim());
     final reflection =
         normalizeDisplayText((tr['reflection'] ?? '').toString().trim());
     final farewell = langFarewell(widget.lang);
+    final speechText = _buildSpeechText(
+      header: headerText,
+      verse: verse,
+      description: description,
+      prayer: prayer,
+      reflection: reflection,
+      farewell: farewell,
+      verseLabel: _verseLabel(widget.lang),
+      prayerLabel: t.prayerTitle,
+      reflectionLabel: _reflectionLabel(widget.lang),
+    );
 
     final meta = (item.date.isNotEmpty) ? _formatDate(item.date) : '';
 
@@ -125,7 +314,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                 children: [
                   Expanded(
                     child: Text(
-                      verse.isEmpty ? 'â€”' : verse,
+                      headerText.isEmpty ? '---' : headerText,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -136,11 +325,22 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                   FavoriteHeart(foodId: item.id, iconSize: 24),
                   const SizedBox(width: 4),
                   IconButton(
+                    icon: Icon(
+                      _isSpeaking ? Icons.stop_circle : Icons.volume_up,
+                    ),
+                    tooltip: _isSpeaking
+                        ? 'Detener lectura'
+                        : 'Escuchar contenido',
+                    onPressed: () => _handleSpeechTap(speechText),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
                     icon: const Icon(Icons.ios_share),
                     tooltip: 'Compartir',
                     onPressed: () {
                       ShareHelper.openShareSheet(
                         context: context,
+                        title: headerText,
                         langCode: widget.lang,
                         verse: verse,
                         description: description,
@@ -163,6 +363,19 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                   child: Text(
                     meta,
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
+              ],
+              if (title.isNotEmpty && verse.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    verse,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey.shade700,
+                        ),
                   ),
                 ),
               ],

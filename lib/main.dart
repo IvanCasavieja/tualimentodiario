@@ -12,7 +12,7 @@ import 'core/tema.dart'; // themeModeProvider, textScaleProvider, ThemePrefs, bu
 import 'features/home/home_view.dart';
 import 'features/archive/archive_view.dart';
 import 'features/favorites/favorites_view.dart';
-import 'features/profile/profile_view.dart';
+import 'package:tu_alimento_diario/features/profile/profile_view.dart';
 import 'debug/log_observer.dart';
 import 'features/splash/splash_view.dart';
 import 'ads/ad_manager.dart';
@@ -171,7 +171,8 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final current = ref.read(bottomTabIndexProvider);
       if (current == 0) {
-        AppOpenAdManager.instance.showOnLaunch(timeout: const Duration(seconds: 6));
+        AppOpenAdManager.instance
+            .showOnLaunch(timeout: const Duration(seconds: 4));
       }
     });
   }

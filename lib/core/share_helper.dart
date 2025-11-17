@@ -21,6 +21,7 @@ class ShareHelper {
 
   static String buildShareText({
     required String langCode,
+    required String title,
     required String verse,
     required String description,
     required String dateStr,
@@ -29,18 +30,21 @@ class ShareHelper {
     final headerByLang = {
       'es': 'Alimento Diario $datePretty',
       'en': 'Daily Food $datePretty',
-      'pt': 'Alimento Diǭrio $datePretty',
+      'pt': 'Alimento Diario $datePretty',
       'it': 'Cibo Quotidiano $datePretty',
     };
     final header = headerByLang[langCode] ?? 'Alimento Diario $datePretty';
+    final trimmedTitle = title.trim();
     final trimmedVerse = verse.trim();
     final trimmedDescription = description.trim();
 
     final parts = <String>[
       header,
-      if (trimmedVerse.isNotEmpty) trimmedVerse,
+      if (trimmedTitle.isNotEmpty) trimmedTitle,
+      if (trimmedVerse.isNotEmpty && trimmedVerse != trimmedTitle)
+        trimmedVerse,
       if (trimmedDescription.isNotEmpty) trimmedDescription,
-      'Descargǭ la app: $kInstallUrl',
+      'Descarga la app: $kInstallUrl',
     ];
     return parts.join('\n\n');
   }
@@ -66,12 +70,14 @@ class ShareHelper {
   static void openShareSheet({
     required BuildContext context,
     required String langCode,
+    required String title,
     required String verse,
     required String description,
     required String dateStr,
   }) {
     final text = buildShareText(
       langCode: langCode,
+      title: title,
       verse: verse,
       description: description,
       dateStr: dateStr,

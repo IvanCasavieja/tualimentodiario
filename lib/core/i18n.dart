@@ -30,6 +30,20 @@ class Strings {
   final String emailRegister;
   final String email;
   final String password;
+  final String forgotPassword;
+  final String resetEmailSent;
+  final String resetEmailMissing;
+  final String resetEmailError;
+  final String resetEmailFederated;
+  final String feedbackTitle;
+  final String feedbackSubtitle;
+  final String feedbackHint;
+  final String feedbackSubmit;
+  final String feedbackSuccess;
+  final String feedbackError;
+  final String feedbackLimitInfo;
+  final String feedbackLimitReached;
+  final String feedbackTooShort;
   final String cancel;
   final String create;
   final String enter;
@@ -68,6 +82,20 @@ class Strings {
     required this.emailRegister,
     required this.email,
     required this.password,
+    required this.forgotPassword,
+    required this.resetEmailSent,
+    required this.resetEmailMissing,
+    required this.resetEmailError,
+    required this.resetEmailFederated,
+    required this.feedbackTitle,
+    required this.feedbackSubtitle,
+    required this.feedbackHint,
+    required this.feedbackSubmit,
+    required this.feedbackSuccess,
+    required this.feedbackError,
+    required this.feedbackLimitInfo,
+    required this.feedbackLimitReached,
+    required this.feedbackTooShort,
     required this.cancel,
     required this.create,
     required this.enter,
@@ -107,6 +135,22 @@ const _es = Strings(
   emailRegister: 'Crear cuenta con email',
   email: 'Email',
   password: 'Contraseña',
+  forgotPassword: '¿Olvidaste tu contraseña?',
+  resetEmailSent: 'Revisa tu correo para restablecer la contraseña.',
+  resetEmailMissing: 'Ingresá tu email para enviar el enlace.',
+  resetEmailError: 'No se pudo enviar el correo de restablecimiento.',
+  resetEmailFederated:
+      'Esta cuenta se creó con Google u otro proveedor. Inicia sesión con ese método.',
+  feedbackTitle: 'Envíanos tu opinión',
+  feedbackSubtitle: 'Queremos saber qué mejorar o qué te gusta.',
+  feedbackHint: 'Escribe aquí tu mensaje',
+  feedbackSubmit: 'Enviar opinión',
+  feedbackSuccess: '¡Gracias! Tu opinión fue enviada.',
+  feedbackError: 'No se pudo enviar la opinión. Intenta más tarde.',
+  feedbackLimitInfo: 'Podés enviar una opinión cada 3 días.',
+  feedbackLimitReached:
+      'Podrás volver a enviar una opinión desde {date}.',
+  feedbackTooShort: 'Escribe al menos 20 caracteres.',
   cancel: 'Cancelar',
   create: 'Crear',
   enter: 'Entrar',
@@ -145,6 +189,21 @@ const _en = Strings(
   emailRegister: 'Create account with email',
   email: 'Email',
   password: 'Password',
+  forgotPassword: 'Forgot password?',
+  resetEmailSent: 'Check your inbox to reset your password.',
+  resetEmailMissing: 'Enter your email to receive the reset link.',
+  resetEmailError: 'Could not send the reset email.',
+  resetEmailFederated:
+      'This account uses Google/another provider. Please continue with that method.',
+  feedbackTitle: 'Send us your feedback',
+  feedbackSubtitle: 'Tell us what you love or what we can improve.',
+  feedbackHint: 'Write your message here',
+  feedbackSubmit: 'Send feedback',
+  feedbackSuccess: 'Thanks! Your feedback was sent.',
+  feedbackError: 'Could not send your feedback. Try again later.',
+  feedbackLimitInfo: 'You can send feedback every 3 days.',
+  feedbackLimitReached: 'You can send a new opinion after {date}.',
+  feedbackTooShort: 'Write at least 20 characters.',
   cancel: 'Cancel',
   create: 'Create',
   enter: 'Enter',
@@ -183,6 +242,22 @@ const _pt = Strings(
   emailRegister: 'Criar conta com e-mail',
   email: 'E-mail',
   password: 'Senha',
+  forgotPassword: 'Esqueceu sua senha?',
+  resetEmailSent: 'Confira seu e-mail para redefinir a senha.',
+  resetEmailMissing: 'Informe seu e-mail para receber o link.',
+  resetEmailError: 'Não foi possível enviar o e-mail de redefinição.',
+  resetEmailFederated:
+      'Esta conta usa Google/outro provedor. Entre por esse método.',
+  feedbackTitle: 'Envie sua opinião',
+  feedbackSubtitle: 'Conte-nos o que você ama ou o que podemos melhorar.',
+  feedbackHint: 'Escreva sua mensagem aqui',
+  feedbackSubmit: 'Enviar opinião',
+  feedbackSuccess: 'Obrigado! Sua opinião foi enviada.',
+  feedbackError: 'Não foi possível enviar a opinião. Tente novamente.',
+  feedbackLimitInfo: 'Você pode enviar uma opinião a cada 3 dias.',
+  feedbackLimitReached:
+      'Você poderá enviar novamente depois de {date}.',
+  feedbackTooShort: 'Escreva pelo menos 20 caracteres.',
   cancel: 'Cancelar',
   create: 'Criar',
   enter: 'Entrar',
@@ -221,6 +296,22 @@ const _it = Strings(
   emailRegister: 'Crea account con email',
   email: 'Email',
   password: 'Password',
+  forgotPassword: 'Hai dimenticato la password?',
+  resetEmailSent: 'Controlla la tua email per reimpostare la password.',
+  resetEmailMissing: 'Inserisci la tua email per ricevere il link.',
+  resetEmailError: 'Impossibile inviare l’email di reimpostazione.',
+  resetEmailFederated:
+      'Questo account usa Google o un altro provider. Accedi con quel metodo.',
+  feedbackTitle: 'Inviaci la tua opinione',
+  feedbackSubtitle: 'Dicci cosa ami o cosa possiamo migliorare.',
+  feedbackHint: 'Scrivi qui il tuo messaggio',
+  feedbackSubmit: 'Invia opinione',
+  feedbackSuccess: 'Grazie! La tua opinione è stata inviata.',
+  feedbackError: 'Impossibile inviare l’opinione. Riprova più tardi.',
+  feedbackLimitInfo: 'Puoi inviare un’opinione ogni 3 giorni.',
+  feedbackLimitReached:
+      'Potrai inviarne un’altra dopo il {date}.',
+  feedbackTooShort: 'Scrivi almeno 20 caratteri.',
   cancel: 'Annulla',
   create: 'Crea',
   enter: 'Entra',
