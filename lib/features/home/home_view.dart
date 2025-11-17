@@ -5,10 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_state.dart'
-    show
-        AppLang,
-        languageProvider,
-        bottomTabIndexProvider;
+    show AppLang, languageProvider, bottomTabIndexProvider;
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/tema.dart'; // AppExtras
 import '../../core/text_filters.dart'; // normalizeDisplayText
@@ -17,6 +14,8 @@ import '../common/moods.dart';
 import '../../core/models/daily_food.dart';
 import '../common/food_detail_dialog.dart';
 import '../../core/share_helper.dart';
+import '../../ads/watch_ad_button.dart';
+import '../../ads/banner_widget.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
@@ -72,8 +71,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
       final startStr = DateFormat('yyyy-MM-dd').format(startMonth);
       final endStr = DateFormat('yyyy-MM-dd').format(endMonth);
       final todayStr = DateFormat('yyyy-MM-dd').format(now);
-      final effectiveEnd =
-          todayStr.compareTo(endStr) < 0 ? todayStr : endStr;
+      final effectiveEnd = todayStr.compareTo(endStr) < 0 ? todayStr : endStr;
 
       final snap = await FirebaseFirestore.instance
           .collection('dailyFoods')
@@ -125,77 +123,94 @@ class _HomeViewState extends ConsumerState<HomeView> {
       decoration: BoxDecoration(gradient: extras.homeBackground),
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(centerTitle: true, title: Text(t.appTitle)),
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text(t.appTitle),
+          actions: const [WatchAdButton()],
+        ),
         body: SafeArea(
-          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: _latest5Query().snapshots(),
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snap.hasError) {
-                return Center(child: Text('Error: ${snap.error}'));
-              }
-              final docs = snap.data?.docs ?? [];
-              if (docs.isEmpty) {
-                return const Center(child: Text('No hay alimentos diarios.'));
-              }
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
-                  _HeroHeader(
-                    title: t.headerDailyFood,
-                    subtitle: t.headerSubtitle,
-                    onRandom: _openRandom,
-                    randomLabel: t.headerSurprise,
-                    randomEnabled: !_randomInFlight,
-                  ),
-                  const SizedBox(height: 12),
-                  ...docs.map((d) {
-                    final data = d.data();
-                    final id = d.id;
-                    final dt = _parseDate(data['date']);
-                    final item = DailyFood.fromDoc(d);
-                    final translations =
-                        item.translations;
-                    final tr = _pickLangMap(
-                      translations,
-                      primary: langCode,
-                      fallback: 'es',
-                    );
-                    final verse =
-                        (tr['verse'] as String?)?.trim().trimRight() ?? '—';
-                    final titleText =
-                        (tr['title'] as String?)?.trim().trimRight() ?? '';
-                    final headline =
-                        titleText.isNotEmpty ? titleText : verse;
-                    final description =
-                        (tr['description'] as String?)?.trim().trimRight() ??
-                        '—';
+          child: Column(
+            children: [
+              Expanded(
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: _latest5Query().snapshots(),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snap.hasError) {
+                      return Center(child: Text('Error: ${snap.error}'));
+                    }
+                    final docs = snap.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return const Center(
+                        child: Text('No hay alimentos diarios.'),
+                      );
+                    }
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      children: [
+                        _HeroHeader(
+                          title: t.headerDailyFood,
+                          subtitle: t.headerSubtitle,
+                          onRandom: _openRandom,
+                          randomLabel: t.headerSurprise,
+                          randomEnabled: !_randomInFlight,
+                        ),
+                        const SizedBox(height: 12),
+                        ...docs.map((d) {
+                          final data = d.data();
+                          final id = d.id;
+                          final dt = _parseDate(data['date']);
+                          final item = DailyFood.fromDoc(d);
+                          final translations = item.translations;
+                          final tr = _pickLangMap(
+                            translations,
+                            primary: langCode,
+                            fallback: 'es',
+                          );
+                          final verse =
+                              (tr['verse'] as String?)?.trim().trimRight() ??
+                              '—';
+                          final titleText =
+                              (tr['title'] as String?)?.trim().trimRight() ??
+                              '';
+                          final headline = titleText.isNotEmpty
+                              ? titleText
+                              : verse;
+                          final description =
+                              (tr['description'] as String?)
+                                  ?.trim()
+                                  .trimRight() ??
+                              '—';
 
-                    return _FoodCard(
-                      id: id,
-                      headline: headline,
-                      description: description,
-                      date: dt,
-                      onOpen: () => _openDailyFood(item, langCode),
-                      onShare: () {
-                        ShareHelper.openShareSheet(
-                          context: context,
-                          title: headline,
-                          langCode: langCode,
-                          verse: verse,
-                          description: description,
-                          dateStr: data['date']?.toString() ?? '',
-                        );
-                      },
-                      // colores desde esquema
-                      accent: scheme.tertiary,
+                          return _FoodCard(
+                            id: id,
+                            headline: headline,
+                            description: description,
+                            date: dt,
+                            onOpen: () => _openDailyFood(item, langCode),
+                            onShare: () {
+                              ShareHelper.openShareSheet(
+                                context: context,
+                                title: headline,
+                                langCode: langCode,
+                                verse: verse,
+                                description: description,
+                                dateStr: data['date']?.toString() ?? '',
+                              );
+                            },
+                            // colores desde esquema
+                            accent: scheme.tertiary,
+                          );
+                        }),
+                      ],
                     );
-                  }),
-                ],
-              );
-            },
+                  },
+                ),
+              ),
+              const PersistentBannerAd(),
+            ],
           ),
         ),
       ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_state.dart'; // AppLang, languageProvider
 
 class Strings {
@@ -51,6 +51,8 @@ class Strings {
   final String adminUpload;
   final String adminPanel;
   final String logout;
+  final String adHelpLabel;
+  final String adHelpUnavailable;
 
   // Extras usados en diálogos (detalle)
   final String close;
@@ -103,6 +105,8 @@ class Strings {
     required this.adminUpload,
     required this.adminPanel,
     required this.logout,
+    required this.adHelpLabel,
+    required this.adHelpUnavailable,
     required this.close,
     required this.prayerTitle,
     required this.scrollHint,
@@ -148,8 +152,7 @@ const _es = Strings(
   feedbackSuccess: '¡Gracias! Tu opinión fue enviada.',
   feedbackError: 'No se pudo enviar la opinión. Intenta más tarde.',
   feedbackLimitInfo: 'Podés enviar una opinión cada 3 días.',
-  feedbackLimitReached:
-      'Podrás volver a enviar una opinión desde {date}.',
+  feedbackLimitReached: 'Podrás volver a enviar una opinión desde {date}.',
   feedbackTooShort: 'Escribe al menos 20 caracteres.',
   cancel: 'Cancelar',
   create: 'Crear',
@@ -158,6 +161,8 @@ const _es = Strings(
   adminUpload: 'Subir alimento diario',
   adminPanel: 'Panel de administración',
   logout: 'Cerrar sesión',
+  adHelpLabel: 'Ver anuncio solidario',
+  adHelpUnavailable: 'El anuncio no está disponible. Intenta nuevamente.',
   close: 'Cerrar',
   prayerTitle: 'Oración',
   scrollHint: 'Deslizá para ver más',
@@ -211,6 +216,8 @@ const _en = Strings(
   adminUpload: 'Upload daily food',
   adminPanel: 'Admin panel',
   logout: 'Sign out',
+  adHelpLabel: 'Watch support ad',
+  adHelpUnavailable: 'Ad unavailable. Try again later.',
   close: 'Close',
   prayerTitle: 'Prayer',
   scrollHint: 'Scroll to see more',
@@ -255,8 +262,7 @@ const _pt = Strings(
   feedbackSuccess: 'Obrigado! Sua opinião foi enviada.',
   feedbackError: 'Não foi possível enviar a opinião. Tente novamente.',
   feedbackLimitInfo: 'Você pode enviar uma opinião a cada 3 dias.',
-  feedbackLimitReached:
-      'Você poderá enviar novamente depois de {date}.',
+  feedbackLimitReached: 'Você poderá enviar novamente depois de {date}.',
   feedbackTooShort: 'Escreva pelo menos 20 caracteres.',
   cancel: 'Cancelar',
   create: 'Criar',
@@ -265,6 +271,8 @@ const _pt = Strings(
   adminUpload: 'Enviar alimento diário',
   adminPanel: 'Painel de administração',
   logout: 'Sair',
+  adHelpLabel: 'Ver anúncio solidário',
+  adHelpUnavailable: 'Anúncio indisponível. Tente novamente.',
   close: 'Fechar',
   prayerTitle: 'Oração',
   scrollHint: 'Deslize para ver mais',
@@ -309,8 +317,7 @@ const _it = Strings(
   feedbackSuccess: 'Grazie! La tua opinione è stata inviata.',
   feedbackError: 'Impossibile inviare l’opinione. Riprova più tardi.',
   feedbackLimitInfo: 'Puoi inviare un’opinione ogni 3 giorni.',
-  feedbackLimitReached:
-      'Potrai inviarne un’altra dopo il {date}.',
+  feedbackLimitReached: 'Potrai inviarne un’altra dopo il {date}.',
   feedbackTooShort: 'Scrivi almeno 20 caratteri.',
   cancel: 'Annulla',
   create: 'Crea',
@@ -319,6 +326,8 @@ const _it = Strings(
   adminUpload: 'Carica cibo quotidiano',
   adminPanel: 'Pannello di amministrazione',
   logout: 'Esci',
+  adHelpLabel: 'Guarda annuncio solidale',
+  adHelpUnavailable: 'Annuncio non disponibile. Riprova più tardi.',
   close: 'Chiudi',
   prayerTitle: 'Preghiera',
   scrollHint: 'Scorri per vedere altro',
@@ -337,5 +346,3 @@ final stringsProvider = Provider<Strings>((ref) {
       return _es;
   }
 });
-
-

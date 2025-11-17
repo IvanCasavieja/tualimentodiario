@@ -6,7 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import 'ads/ad_manager.dart';
+import 'ads/interstitial_manager.dart';
 import 'core/app_state.dart';
 import 'core/i18n.dart'; // stringsProvider
 import 'core/tema.dart'; // ThemeMode, escala de texto y temas Light/Dark
@@ -18,14 +18,13 @@ import 'features/profile/profile_view.dart';
 import 'features/splash/splash_view.dart';
 
 const bool kEnableRiverpodLogs = false;
-const Duration kAppOpenShowTimeout = Duration(seconds: 4);
 
 /// Punto de entrada de la app: inicializa Firebase, sesión y preferencias.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await MobileAds.instance.initialize();
-  AppOpenAdManager.instance.loadAd();
+  InterstitialAdManager.instance.loadAd();
 
   // Inicia una sesión anónima si no existe un usuario actual.
   if (FirebaseAuth.instance.currentUser == null) {
@@ -86,9 +85,7 @@ class App extends ConsumerWidget {
         );
       },
       home: const SplashView(), // Vista raíz con navegación inferior por tabs.
-      routes: {
-        '/home': (_) => const NavScaffold(),
-      },
+      routes: {'/home': (_) => const NavScaffold()},
     );
   }
 
@@ -123,18 +120,6 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
     FavoritesView(),
     ProfileView(),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final current = ref.read(bottomTabIndexProvider);
-      if (current == 0) {
-        AppOpenAdManager.instance
-            .showOnLaunch(timeout: kAppOpenShowTimeout);
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

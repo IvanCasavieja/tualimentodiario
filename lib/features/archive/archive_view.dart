@@ -12,6 +12,7 @@ import '../../core/share_helper.dart';
 import '../common/food_detail_dialog.dart';
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
+import '../../ads/watch_ad_button.dart';
 
 class ArchiveView extends ConsumerStatefulWidget {
   final String? initialFoodId;
@@ -372,7 +373,9 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
-  Future<void> _waitWhileLoading({Duration maxWait = const Duration(seconds: 10)}) async {
+  Future<void> _waitWhileLoading({
+    Duration maxWait = const Duration(seconds: 10),
+  }) async {
     final start = DateTime.now();
     while (_loading) {
       await Future.delayed(const Duration(milliseconds: 30));
@@ -386,7 +389,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       }
     }
   }
-
 
   // ============================================
 
@@ -436,7 +438,10 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
         : Colors.black12.withValues(alpha: .06);
 
     return Scaffold(
-      appBar: AppBar(title: Text(t.archiveTitle)),
+      appBar: AppBar(
+        title: Text(t.archiveTitle),
+        actions: const [WatchAdButton()],
+      ),
       body: Column(
         children: [
           // Filtros
@@ -554,8 +559,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                       final verse = (tmap['verse'] as String?)?.trim() ?? '—';
                       final titleText =
                           (tmap['title'] as String?)?.trim() ?? '';
-                      final headline =
-                          titleText.isNotEmpty ? titleText : verse;
+                      final headline = titleText.isNotEmpty ? titleText : verse;
                       final description =
                           (tmap['description'] as String?)?.trim() ?? '';
                       final dateStr = (data['date'] as String?) ?? '';
@@ -607,7 +611,10 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
-                                        ellipsize(normalizeDisplayText(description), 130),
+                                        ellipsize(
+                                          normalizeDisplayText(description),
+                                          130,
+                                        ),
                                         style: textTheme.bodyMedium?.copyWith(
                                           color:
                                               Theme.of(context).brightness ==

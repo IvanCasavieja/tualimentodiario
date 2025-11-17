@@ -65,10 +65,9 @@ class _FeedbackViewState extends ConsumerState<FeedbackView> {
             const SizedBox(height: 24),
             Text(
               t.feedbackLimitInfo,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey[600]),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
             ),
             const Spacer(),
             SizedBox(
@@ -115,8 +114,7 @@ class _FeedbackViewState extends ConsumerState<FeedbackView> {
         if (lastSent != null && lastSent.isAfter(windowStart)) {
           final next = lastSent.add(const Duration(days: 3));
           final formatted = DateFormat('dd/MM/yyyy HH:mm').format(next);
-          final msg =
-              t.feedbackLimitReached.replaceFirst('{date}', formatted);
+          final msg = t.feedbackLimitReached.replaceFirst('{date}', formatted);
           messenger?.showSnackBar(SnackBar(content: Text(msg)));
           setState(() => _sending = false);
           return;

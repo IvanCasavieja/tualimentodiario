@@ -38,6 +38,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // --- colección userFeedback ---
+    match /userFeedback/{docId} {
+      // cualquier usuario autenticado puede enviar feedback
+      allow create: if request.auth != null;
+      // solo administradores pueden leer o modificar feedbacks
+      allow read, update, delete: if isAdmin();
+    }
+
     // --- catch-all ---
     match /{document=**} {
       allow read: if true;

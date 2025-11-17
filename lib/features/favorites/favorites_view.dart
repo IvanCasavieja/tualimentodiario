@@ -10,6 +10,7 @@ import '../../core/app_state.dart';
 import '../../core/ui_utils.dart';
 import '../../core/i18n.dart'; // stringsProvider
 import '../common/food_detail_dialog.dart';
+import '../../ads/watch_ad_button.dart';
 
 class FavoritesView extends ConsumerWidget {
   const FavoritesView({super.key});
@@ -23,7 +24,10 @@ class FavoritesView extends ConsumerWidget {
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(t.favoritesTitle)),
+        appBar: AppBar(
+          title: Text(t.favoritesTitle),
+          actions: const [WatchAdButton()],
+        ),
         body: Center(child: Text(t.favoritesNeedLogin)),
       );
     }
@@ -31,7 +35,10 @@ class FavoritesView extends ConsumerWidget {
     final favIds = ref.watch(favoritesIdsProvider(user.uid));
 
     return Scaffold(
-      appBar: AppBar(title: Text(t.favoritesTitle)),
+      appBar: AppBar(
+        title: Text(t.favoritesTitle),
+        actions: const [WatchAdButton()],
+      ),
       body: favIds.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -65,13 +72,11 @@ class FavoritesView extends ConsumerWidget {
               }
 
               final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-              final docs = (snap.data ?? [])
-                  .expand((e) => e.docs)
-                  .where((doc) {
-                    final rawDate = (doc.data()['date'] ?? '').toString();
-                    if (rawDate.isEmpty) return true;
-                    return rawDate.compareTo(todayStr) <= 0;
-                  }).toList();
+              final docs = (snap.data ?? []).expand((e) => e.docs).where((doc) {
+                final rawDate = (doc.data()['date'] ?? '').toString();
+                if (rawDate.isEmpty) return true;
+                return rawDate.compareTo(todayStr) <= 0;
+              }).toList();
               if (docs.isEmpty) {
                 return Center(child: Text(t.favoritesEmpty));
               }
@@ -95,8 +100,10 @@ class FavoritesView extends ConsumerWidget {
                   final verse = (tr['verse'] ?? '').toString().trim();
                   final title = (tr['title'] ?? '').toString().trim();
                   final headline = title.isNotEmpty ? title : verse;
-                  final description =
-                      ellipsize((tr['description'] ?? '').toString(), 140);
+                  final description = ellipsize(
+                    (tr['description'] ?? '').toString(),
+                    140,
+                  );
                   final subtitleBuffer = StringBuffer();
                   if (verse.isNotEmpty && verse != headline) {
                     subtitleBuffer.writeln(verse);
