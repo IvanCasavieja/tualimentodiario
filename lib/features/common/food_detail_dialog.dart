@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/daily_food.dart';
 import '../../core/ui_utils.dart';
 import '../../core/text_filters.dart'; // normalizeDisplayText
+import '../../core/daily_food_translations.dart';
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/share_helper.dart';
 import '../common/favorite_heart.dart';
@@ -90,7 +91,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     try {
       final locale = await _resolveAvailableLocale();
       await _tts.setLanguage(locale);
-      await _tts.setSpeechRate(0.72);
+      await _tts.setSpeechRate(_speechRate());
       await _tts.setPitch(1.0);
       await _tts.setVolume(_kMaxSpeechVolume);
       try {
@@ -186,6 +187,15 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     }
   }
 
+  double _speechRate() {
+    switch (widget.lang) {
+      case 'en':
+        return 0.58;
+      default:
+        return 0.72;
+    }
+  }
+
   Future<String> _resolveAvailableLocale() async {
     final desired = _ttsLocale(widget.lang);
     try {
@@ -256,19 +266,6 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     return parts.join('. ');
   }
 
-  Map<String, dynamic> _pickLang(Map<String, dynamic> translations) {
-    if (translations[widget.lang] is Map) {
-      return (translations[widget.lang] as Map).cast<String, dynamic>();
-    }
-    if (translations['es'] is Map) {
-      return (translations['es'] as Map).cast<String, dynamic>();
-    }
-    for (final v in translations.values) {
-      if (v is Map) return v.cast<String, dynamic>();
-    }
-    return const {};
-  }
-
   String _formatDate(String raw) {
     try {
       final dt = DateFormat('yyyy-MM-dd').parseStrict(raw);
@@ -283,14 +280,17 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
     final t = ref.watch(stringsProvider);
 
     final item = widget.item;
-    final tr = _pickLang(Map<String, dynamic>.from(item.translations));
+    final tr = pickDailyFoodTranslation(
+      Map<String, dynamic>.from(item.translations),
+      primary: widget.lang,
+    );
     final verse = normalizeDisplayText((tr['verse'] ?? '').toString().trim());
     final title = normalizeDisplayText((tr['title'] ?? '').toString().trim());
-    final headerText = title.isNotEmpty ? title : verse;
-    final description = normalizeDisplayText(
-      (tr['description'] ?? '').toString().trim(),
-    );
-    final prayer = normalizeDisplayText((tr['prayer'] ?? '').toString().trim());
+    final headerText = verse.isNotEmpty ? verse : title;
+    final descriptionRaw = (tr['description'] ?? '').toString().trim();
+    final description = normalizeDisplayText(descriptionRaw);
+    final prayerText = normalizeDisplayText((tr['prayer'] ?? '').toString().trim());
+    final prayerDisplay = prayerText.isNotEmpty ? 'Ora así: $prayerText' : '';
     final reflection = normalizeDisplayText(
       (tr['reflection'] ?? '').toString().trim(),
     );
@@ -299,13 +299,115 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
       header: headerText,
       verse: verse,
       description: description,
-      prayer: prayer,
+      prayer: prayerDisplay,
       reflection: reflection,
       farewell: farewell,
       verseLabel: _verseLabel(widget.lang),
       prayerLabel: t.prayerTitle,
       reflectionLabel: _reflectionLabel(widget.lang),
     );
+
+    const sectionSpacing = 12.0;
+    final descriptionParagraphs = descriptionRaw
+        .split(RegExp(r'\n\s*\n'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final sectionWidgets = <Widget>[];
+    void addSection(Widget widget) {
+      sectionWidgets.add(widget);
+    }
+    if (title.isNotEmpty && title != verse) {
+      addSection(
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ),
+      );
+    }
+    for (final paragraph in descriptionParagraphs) {
+      addSection(
+        Text(
+          paragraph,
+          textAlign: TextAlign.left,
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.35,
+          ),
+        ),
+      );
+    }
+    if (reflection.isNotEmpty) {
+      addSection(
+        Text(
+          reflection,
+          textAlign: TextAlign.left,
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.35,
+          ),
+        ),
+      );
+    }
+    if (prayerDisplay.isNotEmpty) {
+      addSection(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t.prayerTitle,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              prayerDisplay,
+              textAlign: TextAlign.left,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (farewell.isNotEmpty) {
+      addSection(
+        Text(
+          '$farewell.',
+          style: TextStyle(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.primary,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    final spacedSections = <Widget>[];
+    for (var i = 0; i < sectionWidgets.length; i++) {
+      final isFirst = i == 0;
+      final isLast = i == sectionWidgets.length - 1;
+      spacedSections.add(
+        Container(
+          width: double.infinity,
+          margin: EdgeInsets.only(
+            top: isFirst ? sectionSpacing : 0,
+            bottom: isLast ? 0 : sectionSpacing,
+          ),
+          child: sectionWidgets[i],
+        ),
+      );
+    }
 
     final meta = (item.date.isNotEmpty) ? _formatDate(item.date) : '';
 
@@ -361,11 +463,9 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                       onPressed: () {
                         ShareHelper.openShareSheet(
                           context: context,
-                          title: headerText,
                           langCode: widget.lang,
-                          verse: verse,
-                          description: description,
-                          dateStr: item.date,
+                          item: item,
+                          prayerLabel: t.prayerTitle,
                         );
                       },
                     ),
@@ -387,21 +487,6 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                     ),
                   ),
                 ],
-                if (title.isNotEmpty && verse.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      verse,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 10),
-
                 // Content with scroll
                 ConstrainedBox(
                   constraints: BoxConstraints(
@@ -418,56 +503,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (description.isNotEmpty) ...[
-                                Text(
-                                  normalizeDisplayText(description),
-                                  textAlign: TextAlign.left,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    height: 1.35,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                              if (reflection.isNotEmpty) ...[
-                                Text(
-                                  normalizeDisplayText(reflection),
-                                  textAlign: TextAlign.left,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    height: 1.35,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                              if (prayer.isNotEmpty) ...[
-                                Text(
-                                  t.prayerTitle,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  normalizeDisplayText(prayer),
-                                  textAlign: TextAlign.left,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    height: 1.35,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                              Text(
-                                '$farewell.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                              if (spacedSections.isNotEmpty) ...spacedSections,
                             ],
                           ),
                         ),

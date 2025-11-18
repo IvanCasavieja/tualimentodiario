@@ -7,6 +7,7 @@ import '../../core/app_state.dart'; // languageProvider, selectedFoodIdProvider
 import '../../core/models/daily_food.dart';
 import '../../core/ui_utils.dart'; // ellipsize
 import '../../core/text_filters.dart'; // normalizeDisplayText
+import '../../core/daily_food_translations.dart';
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/share_helper.dart';
 import '../common/food_detail_dialog.dart';
@@ -277,23 +278,6 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
     }
   }
 
-  static Map<String, dynamic> _pickLangMap(
-    Map<String, dynamic> translations, {
-    required String primary,
-    required String fallback,
-  }) {
-    if (translations[primary] is Map) {
-      return (translations[primary] as Map).cast<String, dynamic>();
-    }
-    if (translations[fallback] is Map) {
-      return (translations[fallback] as Map).cast<String, dynamic>();
-    }
-    for (final v in translations.values) {
-      if (v is Map) return v.cast<String, dynamic>();
-    }
-    return const {};
-  }
-
   String _formatDate(String raw) {
     try {
       final dt = DateFormat('yyyy-MM-dd').parseStrict(raw);
@@ -547,11 +531,12 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
                       final doc = _items[i];
                       final data = doc.data();
+                      final item = DailyFood.fromDoc(doc);
                       final translations =
                           (data['translations'] as Map?)
                               ?.cast<String, dynamic>() ??
                           {};
-                      final tmap = _pickLangMap(
+                      final tmap = pickDailyFoodTranslation(
                         translations,
                         primary: _langCode,
                         fallback: 'es',
@@ -654,10 +639,8 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                                   ShareHelper.openShareSheet(
                                                     context: context,
                                                     langCode: _langCode,
-                                                    title: titleText,
-                                                    verse: verse,
-                                                    description: description,
-                                                    dateStr: dateStr,
+                                                    item: item,
+                                                    prayerLabel: t.prayerTitle,
                                                   );
                                                 },
                                               ),

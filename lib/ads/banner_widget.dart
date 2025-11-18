@@ -7,6 +7,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'ad_units.dart';
 
 const String _releaseBannerId = String.fromEnvironment('BANNER_AD_UNIT_ID');
+const _horizontalPadding = 16.0;
 
 String _resolveAdUnitId() {
   if (kDebugMode) {
@@ -31,22 +32,47 @@ class PersistentBannerAd extends StatefulWidget {
 class _PersistentBannerAdState extends State<PersistentBannerAd> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
+  int _lastAdaptiveWidth = 0;
 
   @override
-  void initState() {
-    super.initState();
-    _loadAd();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _maybeLoadAdaptiveBanner();
   }
 
-  void _loadAd() {
-    _bannerAd = BannerAd(
-      size: AdSize.banner,
+  void _maybeLoadAdaptiveBanner() {
+    final widthForAd = _calculateAdaptiveWidth(context);
+    if (widthForAd <= 0 || widthForAd == _lastAdaptiveWidth) return;
+    _lastAdaptiveWidth = widthForAd;
+    _loadAdaptiveBanner(widthForAd);
+  }
+
+  int _calculateAdaptiveWidth(BuildContext context) {
+    final width = MediaQuery.of(context).size.width - (_horizontalPadding * 2);
+    return width > 0 ? width.toInt() : 0;
+  }
+
+  Future<void> _loadAdaptiveBanner(int width) async {
+    final size = await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
+      width,
+    );
+    if (!mounted) return;
+
+    _bannerAd?.dispose();
+    _bannerAd = null;
+    _isLoaded = false;
+    setState(() {});
+
+    late final BannerAd bannerAd;
+    bannerAd = BannerAd(
+      size: size ?? AdSize.banner,
       adUnitId: _resolveAdUnitId(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           if (!mounted) return;
           setState(() {
             _isLoaded = true;
+            _bannerAd = bannerAd;
           });
         },
         onAdFailedToLoad: (ad, error) {
@@ -59,7 +85,9 @@ class _PersistentBannerAdState extends State<PersistentBannerAd> {
         },
       ),
       request: const AdRequest(),
-    )..load();
+    );
+
+    bannerAd.load();
   }
 
   @override
@@ -75,7 +103,10 @@ class _PersistentBannerAdState extends State<PersistentBannerAd> {
     }
     final height = _bannerAd!.size.height.toDouble();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _horizontalPadding,
+        vertical: 8,
+      ),
       child: SizedBox(
         width: double.infinity,
         height: height,

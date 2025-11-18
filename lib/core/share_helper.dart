@@ -5,6 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'daily_food_translations.dart';
+import 'models/daily_food.dart';
+import 'text_filters.dart';
+import 'ui_utils.dart';
+
 class ShareHelper {
   const ShareHelper._();
 
@@ -19,34 +24,53 @@ class ShareHelper {
     }
   }
 
-  static String buildShareText({
+  static String _buildDetailShareText({
+    required DailyFood item,
     required String langCode,
-    required String title,
-    required String verse,
-    required String description,
-    required String dateStr,
+    required String prayerLabel,
   }) {
-    final datePretty = _formatDate(dateStr);
-    final headerByLang = {
-      'es': 'Alimento Diario $datePretty',
-      'en': 'Daily Food $datePretty',
-      'pt': 'Alimento Diario $datePretty',
-      'it': 'Cibo Quotidiano $datePretty',
-    };
-    final header = headerByLang[langCode] ?? 'Alimento Diario $datePretty';
-    final trimmedTitle = title.trim();
-    final trimmedVerse = verse.trim();
-    final trimmedDescription = description.trim();
+    final tr = pickDailyFoodTranslation(
+      item.translations,
+      primary: langCode,
+    );
 
-    final parts = <String>[
-      header,
-      if (trimmedTitle.isNotEmpty) trimmedTitle,
-      if (trimmedVerse.isNotEmpty && trimmedVerse != trimmedTitle)
-        trimmedVerse,
-      if (trimmedDescription.isNotEmpty) trimmedDescription,
-      'Descarga la app: $kInstallUrl',
-    ];
-    return parts.join('\n\n');
+    final verse =
+        normalizeDisplayText((tr['verse'] ?? '').toString().trim());
+    final title =
+        normalizeDisplayText((tr['title'] ?? '').toString().trim());
+    final headerText = verse.isNotEmpty ? verse : title;
+    final descriptionRaw = (tr['description'] ?? '').toString().trim();
+    final descriptionParagraphs = descriptionRaw
+        .split(RegExp(r'\n\s*\n'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final reflection =
+        normalizeDisplayText((tr['reflection'] ?? '').toString().trim());
+    final prayerText =
+        normalizeDisplayText((tr['prayer'] ?? '').toString().trim());
+    final prayerDisplay =
+        prayerText.isNotEmpty ? 'Ora así: $prayerText' : '';
+    final farewell = langFarewell(langCode);
+    final sections = <String>[];
+
+    if (headerText.isNotEmpty) sections.add(headerText);
+    final formattedDate = _formatDate(item.date);
+    if (formattedDate.isNotEmpty) sections.add(formattedDate);
+    if (title.isNotEmpty && title != headerText) {
+      sections.add(title);
+    }
+    if (descriptionParagraphs.isNotEmpty) {
+      sections.addAll(descriptionParagraphs);
+    }
+    if (reflection.isNotEmpty) sections.add(reflection);
+    if (prayerDisplay.isNotEmpty) {
+      sections.add('$prayerLabel\n$prayerDisplay');
+    }
+    if (farewell.isNotEmpty) sections.add(farewell);
+    sections.add('Descarga la app: $kInstallUrl');
+
+    return sections.where((s) => s.trim().isNotEmpty).join('\n\n');
   }
 
   static Future<void> _shareToWhatsApp(String text) async {
@@ -70,17 +94,13 @@ class ShareHelper {
   static void openShareSheet({
     required BuildContext context,
     required String langCode,
-    required String title,
-    required String verse,
-    required String description,
-    required String dateStr,
+    required DailyFood item,
+    required String prayerLabel,
   }) {
-    final text = buildShareText(
+    final text = _buildDetailShareText(
+      item: item,
       langCode: langCode,
-      title: title,
-      verse: verse,
-      description: description,
-      dateStr: dateStr,
+      prayerLabel: prayerLabel,
     );
 
     final messenger = ScaffoldMessenger.maybeOf(context);

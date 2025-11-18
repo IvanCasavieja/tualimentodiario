@@ -9,6 +9,7 @@ import '../../core/app_state.dart'
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/tema.dart'; // AppExtras
 import '../../core/text_filters.dart'; // normalizeDisplayText
+import '../../core/daily_food_translations.dart';
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
 import '../../core/models/daily_food.dart';
@@ -164,7 +165,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
                           final dt = _parseDate(data['date']);
                           final item = DailyFood.fromDoc(d);
                           final translations = item.translations;
-                          final tr = _pickLangMap(
+                          final tr = pickDailyFoodTranslation(
                             translations,
                             primary: langCode,
                             fallback: 'es',
@@ -175,9 +176,6 @@ class _HomeViewState extends ConsumerState<HomeView> {
                           final titleText =
                               (tr['title'] as String?)?.trim().trimRight() ??
                               '';
-                          final headline = titleText.isNotEmpty
-                              ? titleText
-                              : verse;
                           final description =
                               (tr['description'] as String?)
                                   ?.trim()
@@ -186,18 +184,17 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
                           return _FoodCard(
                             id: id,
-                            headline: headline,
+                            verse: verse,
+                            title: titleText,
                             description: description,
                             date: dt,
                             onOpen: () => _openDailyFood(item, langCode),
                             onShare: () {
                               ShareHelper.openShareSheet(
                                 context: context,
-                                title: headline,
                                 langCode: langCode,
-                                verse: verse,
-                                description: description,
-                                dateStr: data['date']?.toString() ?? '',
+                                item: item,
+                                prayerLabel: t.prayerTitle,
                               );
                             },
                             // colores desde esquema
@@ -228,23 +225,6 @@ class _HomeViewState extends ConsumerState<HomeView> {
       case AppLang.it:
         return 'it';
     }
-  }
-
-  static Map<String, dynamic> _pickLangMap(
-    Map<String, dynamic> translations, {
-    required String primary,
-    required String fallback,
-  }) {
-    if (translations[primary] is Map) {
-      return (translations[primary] as Map).cast<String, dynamic>();
-    }
-    if (translations[fallback] is Map) {
-      return (translations[fallback] as Map).cast<String, dynamic>();
-    }
-    for (final v in translations.values) {
-      if (v is Map) return v.cast<String, dynamic>();
-    }
-    return const {};
   }
 
   static DateTime _parseDate(dynamic raw) {
@@ -398,7 +378,10 @@ class _PillIconButton extends StatelessWidget {
 }
 
 class _FoodCard extends StatelessWidget {
-  final String id, headline, description;
+  final String id;
+  final String verse;
+  final String title;
+  final String description;
   final DateTime date;
   final VoidCallback onOpen;
   final VoidCallback onShare;
@@ -406,7 +389,8 @@ class _FoodCard extends StatelessWidget {
 
   const _FoodCard({
     required this.id,
-    required this.headline,
+    required this.verse,
+    required this.title,
     required this.description,
     required this.date,
     required this.onOpen,
@@ -422,6 +406,72 @@ class _FoodCard extends StatelessWidget {
     final shadow = Theme.of(context).brightness == Brightness.dark
         ? Colors.black.withValues(alpha: .35)
         : Colors.black12.withValues(alpha: .06);
+    const sectionSpacing = 10.0;
+    final descriptionParagraphs = description
+        .split(RegExp(r'\n\s*\n'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final sections = <Widget>[];
+    void addSection(Widget widget) {
+      sections.add(widget);
+    }
+    addSection(
+      Text(
+        normalizeDisplayText(verse),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: text.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+    if (title.isNotEmpty) {
+      addSection(
+        Text(
+          normalizeDisplayText(title),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: .85)
+                : Colors.black.withValues(alpha: .8),
+          ),
+        ),
+      );
+    }
+    for (final paragraph in descriptionParagraphs) {
+      addSection(
+        Text(
+          normalizeDisplayText(paragraph),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: text.bodyMedium?.copyWith(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: .80)
+                : Colors.black.withValues(alpha: .75),
+          ),
+        ),
+      );
+    }
+
+    final spacedSections = <Widget>[];
+    for (var i = 0; i < sections.length; i++) {
+      final isFirst = i == 0;
+      final isLast = i == sections.length - 1;
+      spacedSections.add(
+        Container(
+          width: double.infinity,
+          margin: EdgeInsets.only(
+            top: isFirst ? sectionSpacing : 0,
+            bottom: isLast ? 0 : sectionSpacing,
+          ),
+          child: sections[i],
+        ),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 12),
@@ -453,25 +503,7 @@ class _FoodCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      normalizeDisplayText(headline),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      normalizeDisplayText(description),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodyMedium?.copyWith(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withValues(alpha: .80)
-                            : Colors.black.withValues(alpha: .75),
-                      ),
-                    ),
+                    if (spacedSections.isNotEmpty) ...spacedSections,
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
