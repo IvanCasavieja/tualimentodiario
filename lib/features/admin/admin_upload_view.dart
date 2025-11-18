@@ -305,12 +305,11 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
           ),
         ),
         if (!_showScheduleStep) ...[
-          IgnorePointer(
-            child: TabBar(
-              controller: _tabs,
-              isScrollable: true,
-              tabs: langs.map((l) => Tab(text: langLabels[l])).toList(),
-            ),
+          TabBar(
+            controller: _tabs,
+            isScrollable: true,
+            onTap: (i) => _tabs.animateTo(i),
+            tabs: langs.map((l) => Tab(text: langLabels[l])).toList(),
           ),
           Expanded(
             child: TabBarView(

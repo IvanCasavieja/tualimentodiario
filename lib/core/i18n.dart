@@ -53,6 +53,12 @@ class Strings {
   final String logout;
   final String adHelpLabel;
   final String adHelpUnavailable;
+  final String adSupportTitle;
+  final String adSupportParagraph;
+  final String adSupportCardTitle;
+  final String adSupportCardSubtitle;
+  final String adSupportButtonLabel;
+  final String adCollaborationLabel;
 
   // Extras usados en diálogos (detalle)
   final String close;
@@ -107,6 +113,12 @@ class Strings {
     required this.logout,
     required this.adHelpLabel,
     required this.adHelpUnavailable,
+    required this.adSupportTitle,
+    required this.adSupportParagraph,
+    required this.adSupportCardTitle,
+    required this.adSupportCardSubtitle,
+    required this.adSupportButtonLabel,
+    required this.adCollaborationLabel,
     required this.close,
     required this.prayerTitle,
     required this.scrollHint,
@@ -163,6 +175,14 @@ const _es = Strings(
   logout: 'Cerrar sesión',
   adHelpLabel: 'Ver anuncio solidario',
   adHelpUnavailable: 'El anuncio no está disponible. Intenta nuevamente.',
+  adSupportTitle: 'Anuncios solidarios',
+  adSupportParagraph:
+      'Cada anuncio que eliges ver aquí es un abrazo silencioso: tu tiempo permite que Tu Alimento Diario llegue más lejos y que la esperanza siga compartiéndose con calidez.',
+  adSupportCardTitle: 'Recuadro solidario',
+  adSupportCardSubtitle:
+      'El anuncio queda contenido en este marco cariñoso para que trabaje por la comunidad con respeto y tranquilidad.',
+  adSupportButtonLabel: 'Ver anuncio',
+  adCollaborationLabel: 'Colaboracion',
   close: 'Cerrar',
   prayerTitle: 'Oración',
   scrollHint: 'Deslizá para ver más',
@@ -218,6 +238,14 @@ const _en = Strings(
   logout: 'Sign out',
   adHelpLabel: 'Watch support ad',
   adHelpUnavailable: 'Ad unavailable. Try again later.',
+  adSupportTitle: 'Solidarity ads',
+  adSupportParagraph:
+      'Every ad you spend a moment with here is a quiet embrace; your attention helps Your Daily Food reach more tables and keeps our hopeful stories alive.',
+  adSupportCardTitle: 'Supportive frame',
+  adSupportCardSubtitle:
+      'This gentle box keeps the announcement calm while it works on behalf of the community.',
+  adSupportButtonLabel: 'Watch ad',
+  adCollaborationLabel: 'Collaboration',
   close: 'Close',
   prayerTitle: 'Prayer',
   scrollHint: 'Scroll to see more',
@@ -273,6 +301,14 @@ const _pt = Strings(
   logout: 'Sair',
   adHelpLabel: 'Ver anúncio solidário',
   adHelpUnavailable: 'Anúncio indisponível. Tente novamente.',
+  adSupportTitle: 'Anúncios solidários',
+  adSupportParagraph:
+      'Cada anúncio que você escolhe assistir aqui é um abraço silencioso: sua atenção ajuda Seu Alimento Diário a alcançar mais mesas e espalhar mais esperança.',
+  adSupportCardTitle: 'Quadro solidário',
+  adSupportCardSubtitle:
+      'O anúncio fica contido neste espaço acolhedor para agir pela comunidade com suavidade.',
+  adSupportButtonLabel: 'Ver anuncio',
+  adCollaborationLabel: 'Colaboracao',
   close: 'Fechar',
   prayerTitle: 'Oração',
   scrollHint: 'Deslize para ver mais',
@@ -327,7 +363,15 @@ const _it = Strings(
   adminPanel: 'Pannello di amministrazione',
   logout: 'Esci',
   adHelpLabel: 'Guarda annuncio solidale',
-  adHelpUnavailable: 'Annuncio non disponibile. Riprova più tardi.',
+  adHelpUnavailable: 'Annuncio non disponibile. Riprova piu tardi.',
+  adSupportTitle: 'Annunci solidali',
+  adSupportParagraph:
+      'Ogni annuncio che decidi di guardare qui e un abbraccio silenzioso: la tua attenzione aiuta Il Tuo Cibo Quotidiano ad arrivare a piu tavole e a far fiorire speranza.',
+  adSupportCardTitle: 'Spazio solidale',
+  adSupportCardSubtitle:
+      "L'annuncio resta contenuto in questa cornice discreta per lavorare per la comunita con dolcezza.",
+  adSupportButtonLabel: 'Guarda annuncio',
+  adCollaborationLabel: 'Collaborazione',
   close: 'Chiudi',
   prayerTitle: 'Preghiera',
   scrollHint: 'Scorri per vedere altro',

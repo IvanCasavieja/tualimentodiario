@@ -125,8 +125,12 @@ class _HomeViewState extends ConsumerState<HomeView> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          centerTitle: true,
-          title: Text(t.appTitle),
+          centerTitle: false,
+          titleSpacing: 0,
+          title: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(t.appTitle),
+          ),
           actions: const [WatchAdButton()],
         ),
         body: SafeArea(
