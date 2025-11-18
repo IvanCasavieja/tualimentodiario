@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/app_state.dart'; // languageProvider, selectedFoodIdProvider
 import '../../core/models/daily_food.dart';
@@ -10,6 +9,7 @@ import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../../core/daily_food_translations.dart';
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/share_helper.dart';
+import '../../core/date_formats.dart';
 import '../common/food_detail_dialog.dart';
 import '../common/favorite_heart.dart';
 import '../common/moods.dart';
@@ -51,7 +51,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
   ProviderSubscription<Set<String>>? _moodsSub;
 
   Query<Map<String, dynamic>> _baseQuery() {
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = DateFormats.iso.format(DateTime.now());
     return FirebaseFirestore.instance
         .collection('dailyFoods')
         .where('isPublished', isEqualTo: true)
@@ -280,8 +280,8 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
   String _formatDate(String raw) {
     try {
-      final dt = DateFormat('yyyy-MM-dd').parseStrict(raw);
-      return DateFormat('dd/MM/yyyy').format(dt);
+      final dt = DateFormats.iso.parseStrict(raw);
+      return DateFormats.display.format(dt);
     } catch (_) {
       return raw;
     }
@@ -289,7 +289,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
 
   DateTime? _tryParseYMD(String s) {
     try {
-      return DateFormat('yyyy-MM-dd').parseStrict(s);
+      return DateFormats.iso.parseStrict(s);
     } catch (_) {
       return null;
     }
@@ -320,7 +320,7 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
       },
     );
     if (picked != null) {
-      ctrl.text = DateFormat('yyyy-MM-dd').format(picked);
+      ctrl.text = DateFormats.iso.format(picked);
       setState(() {});
     }
   }

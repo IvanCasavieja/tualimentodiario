@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'date_formats.dart';
 import 'daily_food_translations.dart';
 import 'models/daily_food.dart';
 import 'text_filters.dart';
@@ -17,8 +17,8 @@ class ShareHelper {
 
   static String _formatDate(String raw) {
     try {
-      final dt = DateFormat('yyyy-MM-dd').parseStrict(raw);
-      return DateFormat('dd/MM/yyyy').format(dt);
+      final dt = DateFormats.iso.parseStrict(raw);
+      return DateFormats.display.format(dt);
     } catch (_) {
       return raw;
     }

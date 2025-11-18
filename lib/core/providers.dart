@@ -4,7 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../features/auth/auth_service.dart';
+import 'date_formats.dart';
 import 'firestore_repository.dart'; // FS
+import 'models/daily_food.dart';
 
 /// ---------------------------------------------------------------------------
 /// 🔐 UIDs con rol de administrador (mantener en un solo lugar)
@@ -63,6 +65,41 @@ final isFavoriteProvider =
       final docRef = FS.favCol(key.uid).doc(key.foodId);
       return docRef.snapshots().map((doc) => doc.exists);
     }, name: 'isFavoriteProvider');
+
+final favoriteFoodsProvider =
+    FutureProvider.family<List<DailyFood>, List<String>>((ref, ids) async {
+      final safeIds = ids.where((id) => id.isNotEmpty).toList();
+      if (safeIds.isEmpty) return [];
+      final futures = <Future<QuerySnapshot<Map<String, dynamic>>>>[];
+      for (var i = 0; i < safeIds.length; i += 10) {
+        final chunk = safeIds.sublist(
+          i,
+          (i + 10 > safeIds.length) ? safeIds.length : i + 10,
+        );
+        futures.add(
+          FirebaseFirestore.instance
+              .collection('dailyFoods')
+              .where(FieldPath.documentId, whereIn: chunk)
+              .get(),
+        );
+      }
+
+      final snapshots = await Future.wait(futures);
+      final todayStr = DateFormats.iso.format(DateTime.now());
+      final filteredDocs = snapshots.expand((snapshot) => snapshot.docs).where((
+        doc,
+      ) {
+        final rawDate = (doc.data()['date'] ?? '').toString();
+        if (rawDate.isEmpty) return true;
+        return rawDate.compareTo(todayStr) <= 0;
+      }).toList();
+      filteredDocs.sort((a, b) {
+        final da = (a.data()['date'] ?? '').toString();
+        final db = (b.data()['date'] ?? '').toString();
+        return db.compareTo(da);
+      });
+      return filteredDocs.map(DailyFood.fromDoc).toList();
+    }, name: 'favoriteFoodsProvider');
 
 /// ---------------------------------------------------------------------------
 /// ✅ ¿ES ADMIN?

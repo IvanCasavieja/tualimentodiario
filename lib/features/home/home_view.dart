@@ -2,7 +2,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/app_state.dart'
     show AppLang, languageProvider, bottomTabIndexProvider;
@@ -17,6 +16,7 @@ import '../common/food_detail_dialog.dart';
 import '../../core/share_helper.dart';
 import '../../ads/watch_ad_button.dart';
 import '../../ads/banner_widget.dart';
+import '../../core/date_formats.dart';
 
 class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
@@ -51,7 +51,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
   }
 
   Query<Map<String, dynamic>> _latest5Query() {
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = DateFormats.iso.format(DateTime.now());
     return FirebaseFirestore.instance
         .collection('dailyFoods')
         .where('isPublished', isEqualTo: true)
@@ -69,9 +69,9 @@ class _HomeViewState extends ConsumerState<HomeView> {
       final now = DateTime.now();
       final startMonth = DateTime(now.year, 8, 1);
       final endMonth = DateTime(now.year, 10, 31);
-      final startStr = DateFormat('yyyy-MM-dd').format(startMonth);
-      final endStr = DateFormat('yyyy-MM-dd').format(endMonth);
-      final todayStr = DateFormat('yyyy-MM-dd').format(now);
+      final startStr = DateFormats.iso.format(startMonth);
+      final endStr = DateFormats.iso.format(endMonth);
+      final todayStr = DateFormats.iso.format(now);
       final effectiveEnd = todayStr.compareTo(endStr) < 0 ? todayStr : endStr;
 
       final snap = await FirebaseFirestore.instance
@@ -238,14 +238,8 @@ class _HomeViewState extends ConsumerState<HomeView> {
       try {
         return DateTime.parse(raw);
       } catch (_) {}
-      for (final p in ['dd/MM/yyyy', 'd/M/yyyy']) {
-        try {
-          return DateFormat(p).parseStrict(raw);
-        } catch (_) {}
-      }
-      try {
-        return DateFormat('dd-MM-yyyy').parseStrict(raw);
-      } catch (_) {}
+      final flexible = DateFormats.tryParseFlexible(raw);
+      if (flexible != null) return flexible;
       return DateTime.fromMillisecondsSinceEpoch(0);
     }
     return DateTime.fromMillisecondsSinceEpoch(0);
@@ -402,7 +396,7 @@ class _FoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final formattedDate = DateFormat('dd/MM/yyyy').format(date);
+    final formattedDate = DateFormats.display.format(date);
     final shadow = Theme.of(context).brightness == Brightness.dark
         ? Colors.black.withValues(alpha: .35)
         : Colors.black12.withValues(alpha: .06);

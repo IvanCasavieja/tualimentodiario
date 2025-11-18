@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/models/daily_food.dart';
 import '../../core/ui_utils.dart';
@@ -11,6 +10,7 @@ import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../../core/daily_food_translations.dart';
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/share_helper.dart';
+import '../../core/date_formats.dart';
 import '../common/favorite_heart.dart';
 
 class FoodDetailDialog extends ConsumerStatefulWidget {
@@ -48,7 +48,7 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
-    _configureTts();
+    // La configuración del motor de voz se dispara solo cuando se activa la lectura.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollCtrl.hasClients) return;
       final canScroll = _scrollCtrl.position.maxScrollExtent > 0;
@@ -268,8 +268,8 @@ class _FoodDetailDialogState extends ConsumerState<FoodDetailDialog>
 
   String _formatDate(String raw) {
     try {
-      final dt = DateFormat('yyyy-MM-dd').parseStrict(raw);
-      return DateFormat('dd/MM/yyyy').format(dt);
+      final dt = DateFormats.iso.parseStrict(raw);
+      return DateFormats.display.format(dt);
     } catch (_) {
       return raw;
     }

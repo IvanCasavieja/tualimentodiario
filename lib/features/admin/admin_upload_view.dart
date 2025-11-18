@@ -3,12 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/providers.dart'; // userIsAdminProvider
 import '../../core/app_state.dart'; // languageProvider
 import '../../core/i18n.dart'; // stringsProvider
 import '../../core/moods_i18n.dart' show moodLabelI18n;
+import '../../core/date_formats.dart';
 import '../common/moods.dart' show kMoods; // lista de moods (slug, icon, color)
 
 /// Admin: crear y publicar el "Alimento Diario" (ES/EN/PT/IT)
@@ -34,8 +34,6 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
     'pt': 'Dia abençoado',
     'it': 'Giorno benedetto',
   };
-
-  static final DateFormat _dateFormatter = DateFormat('yyyy-MM-dd');
 
   late final TabController _tabs;
 
@@ -237,7 +235,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       };
     }
 
-    final dateStr = _dateFormatter.format(_scheduledDate);
+    final dateStr = DateFormats.iso.format(_scheduledDate);
     final dataToSend = {
       'date': dateStr,
       'authorUid': user.uid,
@@ -378,7 +376,7 @@ class _AdminUploadViewState extends ConsumerState<AdminUploadView>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Se publicará el ${DateFormat('dd/MM/yyyy').format(_scheduledDate)} a las 00:00.',
+            'Se publicará el ${DateFormats.display.format(_scheduledDate)} a las 00:00.',
           ),
         ),
       );
@@ -531,7 +529,7 @@ class _ScheduleStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted = DateFormat('dd/MM/yyyy').format(selectedDate);
+    final formatted = DateFormats.display.format(selectedDate);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
       children: [

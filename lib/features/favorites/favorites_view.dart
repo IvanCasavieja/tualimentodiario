@@ -1,12 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/providers.dart'; // authStateProvider, favoritesIdsProvider
 import '../../core/firestore_repository.dart';
-import '../../core/models/daily_food.dart';
 import '../../core/app_state.dart';
+import '../../core/daily_food_translations.dart';
 import '../../core/ui_utils.dart';
 import '../../core/i18n.dart'; // stringsProvider
 import '../common/food_detail_dialog.dart';
@@ -43,59 +41,25 @@ class FavoritesView extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (ids) {
-          if (ids.isEmpty) {
-            return Center(child: Text(t.favoritesEmpty));
-          }
-
-          final futures = <Future<QuerySnapshot<Map<String, dynamic>>>>[];
-          for (var i = 0; i < ids.length; i += 10) {
-            final chunk = ids.sublist(
-              i,
-              (i + 10 > ids.length) ? ids.length : i + 10,
-            );
-            futures.add(
-              FirebaseFirestore.instance
-                  .collection('dailyFoods')
-                  .where(FieldPath.documentId, whereIn: chunk)
-                  .get(),
-            );
-          }
-
-          return FutureBuilder<List<QuerySnapshot<Map<String, dynamic>>>>(
-            future: Future.wait(futures),
-            builder: (ctx, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snap.hasError) {
-                return Center(child: Text('Error: ${snap.error}'));
-              }
-
-              final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-              final docs = (snap.data ?? []).expand((e) => e.docs).where((doc) {
-                final rawDate = (doc.data()['date'] ?? '').toString();
-                if (rawDate.isEmpty) return true;
-                return rawDate.compareTo(todayStr) <= 0;
-              }).toList();
-              if (docs.isEmpty) {
+          if (ids.isEmpty) return Center(child: Text(t.favoritesEmpty));
+          final foodsAsync = ref.watch(favoriteFoodsProvider(ids));
+          return foodsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (foods) {
+              if (foods.isEmpty) {
                 return Center(child: Text(t.favoritesEmpty));
               }
-
-              docs.sort((a, b) {
-                final da = (a.data()['date'] ?? '').toString();
-                final db = (b.data()['date'] ?? '').toString();
-                return db.compareTo(da);
-              });
-
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: docs.length,
+                itemCount: foods.length,
                 itemBuilder: (ctx, i) {
-                  final item = DailyFood.fromDoc(docs[i]);
+                  final item = foods[i];
                   final tr = Map<String, dynamic>.from(
-                    item.translations[langCode] ??
-                        item.translations['es'] ??
-                        {},
+                    pickDailyFoodTranslation(
+                      item.translations,
+                      primary: langCode,
+                    ),
                   );
                   final verse = (tr['verse'] ?? '').toString().trim();
                   final title = (tr['title'] ?? '').toString().trim();

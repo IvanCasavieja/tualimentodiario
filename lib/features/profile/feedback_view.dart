@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/i18n.dart';
+import '../../core/date_formats.dart';
 
 class FeedbackView extends ConsumerStatefulWidget {
   const FeedbackView({super.key});
@@ -113,7 +113,7 @@ class _FeedbackViewState extends ConsumerState<FeedbackView> {
         }
         if (lastSent != null && lastSent.isAfter(windowStart)) {
           final next = lastSent.add(const Duration(days: 3));
-          final formatted = DateFormat('dd/MM/yyyy HH:mm').format(next);
+          final formatted = DateFormats.feedback.format(next);
           final msg = t.feedbackLimitReached.replaceFirst('{date}', formatted);
           messenger?.showSnackBar(SnackBar(content: Text(msg)));
           setState(() => _sending = false);
