@@ -11,18 +11,40 @@ import 'core/app_state.dart';
 import 'core/i18n.dart'; // stringsProvider
 import 'core/tema.dart'; // ThemeMode, escala de texto y temas Light/Dark
 import 'debug/log_observer.dart';
+import 'core/push_notifications.dart';
 import 'features/archive/archive_view.dart';
 import 'features/favorites/favorites_view.dart';
 import 'features/home/home_view.dart';
 import 'features/profile/profile_view.dart';
 import 'features/splash/splash_view.dart';
+import 'firebase_options.dart';
 
 const bool kEnableRiverpodLogs = false;
+
+/// Observador global: mantiene la suscripción al topic de FCM cuando cambia idioma.
+class PushLanguageObserver extends ProviderObserver {
+  const PushLanguageObserver(this._push);
+  final PushNotifications _push;
+
+  @override
+  void didUpdateProvider(
+    ProviderBase provider,
+    Object? previousValue,
+    Object? newValue,
+    ProviderContainer container,
+  ) {
+    if (provider == languageProvider && newValue is AppLang) {
+      _push.onLanguageChanged(newValue);
+    }
+  }
+}
 
 /// Punto de entrada de la app: inicializa Firebase, sesión y preferencias.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await MobileAds.instance.initialize();
   InterstitialAdManager.instance.loadAd();
 
@@ -33,10 +55,12 @@ Future<void> main() async {
 
   // Carga de preferencias persistidas (idioma, tema y escala de texto).
   final savedLang = await LanguagePrefs.load();
+  await PushNotifications.instance.init(savedLang);
   final (savedMode, savedScale) = await ThemePrefs.load();
-  final observers = kEnableRiverpodLogs
-      ? <ProviderObserver>[LogObserver()]
-      : const <ProviderObserver>[];
+  final observers = <ProviderObserver>[
+    if (kEnableRiverpodLogs) LogObserver(),
+    PushLanguageObserver(PushNotifications.instance),
+  ];
 
   runApp(
     ProviderScope(
