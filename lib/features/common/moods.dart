@@ -1,6 +1,7 @@
 // lib/features/common/moods.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../core/app_state.dart' show languageProvider;
 import '../../core/moods_i18n.dart' show moodLabelI18n;
@@ -41,7 +42,7 @@ const kMoods = <MoodDef>[
     Icons.psychology_outlined,
     Color(0xFF48C1F1),
   ),
-  MoodDef('fe', 'Fe', Icons.auto_fix_high, Color(0xFF6C4DF5)),
+  MoodDef('fe', 'Fe', FontAwesomeIcons.handsPraying, Color(0xFF6C4DF5)),
   MoodDef('perdon', 'Perdón', Icons.handshake_outlined, Color(0xFF48C1F1)),
   MoodDef('paciencia', 'Paciencia', Icons.hourglass_empty, Color(0xFF6C4DF5)),
 ];
@@ -131,4 +132,3 @@ class MoodChips extends ConsumerWidget {
     );
   }
 }
-
