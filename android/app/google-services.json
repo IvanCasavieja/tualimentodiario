@@ -7,25 +7,25 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:138827358911:android:e7f855f07b5d377d975c0a",
+        "mobilesdk_app_id": "1:138827358911:android:cd45c6e58c0402ff975c0a",
         "android_client_info": {
-          "package_name": "com.example.tu_alimento_diario"
+          "package_name": "com.tualimentodiario.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "138827358911-os685b0tdruva30en5t3d5ere3hpplqo.apps.googleusercontent.com",
+          "client_id": "138827358911-2vbhm9fkdag7mieevijumn5ugskkosph.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.tu_alimento_diario",
+            "package_name": "com.tualimentodiario.app",
             "certificate_hash": "2a6731a35c9767765fe1799c32c89c4bf65c1018"
           }
         },
         {
-          "client_id": "138827358911-t0ocd8i6ibncsrmenmu6f8a57fau73i6.apps.googleusercontent.com",
+          "client_id": "138827358911-640h3slcn03srtn790lm07o7o0bq43sm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.tu_alimento_diario",
+            "package_name": "com.tualimentodiario.app",
             "certificate_hash": "a1a1a6db888f0c547eb21acc602862e898608a9a"
           }
         },

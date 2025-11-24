@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n.dart';
 import '../../core/date_formats.dart';
+import '../../core/providers.dart'; // authStateProvider, isGuestUser
+import '../../core/app_state.dart'; // bottomTabIndexProvider
 
 class FeedbackView extends ConsumerStatefulWidget {
   const FeedbackView({super.key});
@@ -27,6 +28,35 @@ class _FeedbackViewState extends ConsumerState<FeedbackView> {
   @override
   Widget build(BuildContext context) {
     final t = ref.watch(stringsProvider);
+    final authAsync = ref.watch(authStateProvider);
+    final user = authAsync.value;
+    final isGuest = isGuestUser(user);
+    if (isGuest) {
+      return Scaffold(
+        appBar: AppBar(title: Text(t.feedbackTitle)),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                t.feedbackNeedLogin,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                icon: const Icon(Icons.login),
+                label: Text(t.profileTitle),
+                onPressed: () {
+                  ref.read(bottomTabIndexProvider.notifier).state = 3;
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: Text(t.feedbackTitle)),
       body: Padding(
@@ -88,18 +118,19 @@ class _FeedbackViewState extends ConsumerState<FeedbackView> {
     if (!_formKey.currentState!.validate()) return;
     final t = ref.read(stringsProvider);
     final messenger = ScaffoldMessenger.maybeOf(context);
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final user = ref.read(authStateProvider).value;
+    if (isGuestUser(user)) {
       messenger?.showSnackBar(SnackBar(content: Text(t.feedbackError)));
       return;
     }
+    final currentUser = user!;
     setState(() => _sending = true);
     try {
       final now = DateTime.now();
       final windowStart = now.subtract(const Duration(days: 3));
       final latest = await FirebaseFirestore.instance
           .collection('userFeedback')
-          .where('userId', isEqualTo: user.uid)
+          .where('userId', isEqualTo: currentUser.uid)
           .orderBy('createdAt', descending: true)
           .limit(1)
           .get();
@@ -122,11 +153,11 @@ class _FeedbackViewState extends ConsumerState<FeedbackView> {
       }
 
       await FirebaseFirestore.instance.collection('userFeedback').add({
-        'userId': user.uid,
+        'userId': currentUser.uid,
         'message': _textCtrl.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
-        'userEmail': user.email ?? '',
-        'userName': user.displayName ?? '',
+        'userEmail': currentUser.email ?? '',
+        'userName': currentUser.displayName ?? '',
       });
       if (!mounted) return;
       messenger?.showSnackBar(SnackBar(content: Text(t.feedbackSuccess)));

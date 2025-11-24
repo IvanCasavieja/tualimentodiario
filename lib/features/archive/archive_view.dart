@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_state.dart'; // languageProvider, selectedFoodIdProvider
 import '../../core/models/daily_food.dart';
-import '../../core/ui_utils.dart'; // ellipsize
 import '../../core/text_filters.dart'; // normalizeDisplayText
 import '../../core/daily_food_translations.dart';
 import '../../core/i18n.dart'; // stringsProvider
@@ -544,9 +543,17 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                       final verse = (tmap['verse'] as String?)?.trim() ?? '—';
                       final titleText =
                           (tmap['title'] as String?)?.trim() ?? '';
-                      final headline = titleText.isNotEmpty ? titleText : verse;
                       final description =
                           (tmap['description'] as String?)?.trim() ?? '';
+                      final prayer =
+                          (tmap['prayer'] as String?)?.trim() ?? '';
+                      final farewell =
+                          (tmap['farewell'] as String?)?.trim() ?? '';
+                      final combinedDescription = [
+                        if (description.isNotEmpty) description,
+                        if (prayer.isNotEmpty) 'Ora así: $prayer',
+                        if (farewell.isNotEmpty) farewell,
+                      ].join('\n\n');
                       final dateStr = (data['date'] as String?) ?? '';
 
                       return Container(
@@ -579,89 +586,25 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        normalizeDisplayText(headline),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        ellipsize(
-                                          normalizeDisplayText(description),
-                                          130,
-                                        ),
-                                        style: textTheme.bodyMedium?.copyWith(
-                                          color:
-                                              Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? Colors.white.withValues(
-                                                  alpha: .80,
-                                                )
-                                              : Colors.black.withValues(
-                                                  alpha: .75,
-                                                ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          _DateChip(
-                                            text: _formatDate(dateStr),
-                                            icon: Icons.event,
-                                            color: scheme.tertiary,
-                                          ),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              FavoriteHeart(
-                                                foodId: doc.id,
-                                                iconSize: 22,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              IconButton(
-                                                icon: const Icon(
-                                                  Icons.ios_share,
-                                                ),
-                                                tooltip: 'Compartir',
-                                                onPressed: () {
-                                                  ShareHelper.openShareSheet(
-                                                    context: context,
-                                                    langCode: _langCode,
-                                                    item: item,
-                                                    prayerLabel: t.prayerTitle,
-                                                  );
-                                                },
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(
-                                                  Icons.open_in_new,
-                                                ),
-                                                tooltip: 'Abrir',
-                                                onPressed: () =>
-                                                    _openDetail(doc),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _ArchivePreviewCard(
+                                  verse: verse,
+                                  title: titleText,
+                                  description: combinedDescription,
+                                  dateStr: _formatDate(dateStr),
+                                  langCode: _langCode,
+                                  item: item,
+                                  docId: doc.id,
+                                  scheme: scheme,
+                                  textTheme: textTheme,
+                                  t: t,
+                                  openDetail: () => _openDetail(doc),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
+                        ),
                         ),
                       );
                     },
@@ -669,6 +612,153 @@ class _ArchiveViewState extends ConsumerState<ArchiveView> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ArchivePreviewCard extends StatelessWidget {
+  final String verse;
+  final String title;
+  final String description;
+  final String dateStr;
+  final String langCode;
+  final DailyFood item;
+  final String docId;
+  final ColorScheme scheme;
+  final TextTheme textTheme;
+  final Strings t;
+  final VoidCallback openDetail;
+
+  const _ArchivePreviewCard({
+    required this.verse,
+    required this.title,
+    required this.description,
+    required this.dateStr,
+    required this.langCode,
+    required this.item,
+    required this.docId,
+    required this.scheme,
+    required this.textTheme,
+    required this.t,
+    required this.openDetail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final paragraphs = description
+        .split(RegExp(r'\n\s*\n'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+
+    final sections = <Widget>[];
+    void addSection(Widget w) => sections.add(w);
+
+    addSection(
+      Text(
+        normalizeDisplayText(verse),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+    if (title.isNotEmpty) {
+      addSection(
+        Text(
+          normalizeDisplayText(title),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: .85)
+                : Colors.black.withValues(alpha: .8),
+          ),
+        ),
+      );
+    }
+    for (final p in paragraphs) {
+      addSection(
+        Text(
+          normalizeDisplayText(p),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: .80)
+                : Colors.black.withValues(alpha: .75),
+          ),
+        ),
+      );
+    }
+
+    final spacedSections = <Widget>[];
+    const sectionSpacing = 10.0;
+    for (var i = 0; i < sections.length; i++) {
+      final isFirst = i == 0;
+      final isLast = i == sections.length - 1;
+      spacedSections.add(
+        Container(
+          width: double.infinity,
+          margin: EdgeInsets.only(
+            top: isFirst ? sectionSpacing : 0,
+            bottom: isLast ? 0 : sectionSpacing,
+          ),
+          child: sections[i],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (spacedSections.isNotEmpty) ...spacedSections,
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _DateChip(
+              text: dateStr,
+              icon: Icons.event,
+              color: scheme.tertiary,
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FavoriteHeart(
+                  foodId: docId,
+                  iconSize: 22,
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(
+                    Icons.ios_share,
+                  ),
+                  tooltip: 'Compartir',
+                  onPressed: () {
+                    ShareHelper.openShareSheet(
+                      context: context,
+                      langCode: langCode,
+                      item: item,
+                      prayerLabel: t.prayerTitle,
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.open_in_new,
+                  ),
+                  tooltip: 'Abrir',
+                  onPressed: openDetail,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

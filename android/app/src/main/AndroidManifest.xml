@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.tualimentodiario.app">
     <!-- Permisos necesarios también para builds de release -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -7,7 +8,7 @@
 
     <application
         android:label="Tu Alimento Diario"
-        android:name="${applicationName}"
+        android:name=".AppApplication"
         android:icon="@mipmap/ic_launcher">
         <!-- AdMob App ID -->
         <meta-data

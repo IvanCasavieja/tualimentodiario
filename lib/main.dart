@@ -16,7 +16,6 @@ import 'features/archive/archive_view.dart';
 import 'features/favorites/favorites_view.dart';
 import 'features/home/home_view.dart';
 import 'features/profile/profile_view.dart';
-import 'features/splash/splash_view.dart';
 import 'firebase_options.dart';
 
 const bool kEnableRiverpodLogs = false;
@@ -42,6 +41,8 @@ class PushLanguageObserver extends ProviderObserver {
 /// Punto de entrada de la app: inicializa Firebase, sesión y preferencias.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final savedLangFuture = LanguagePrefs.load();
+  final savedThemeFuture = ThemePrefs.load();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -54,9 +55,9 @@ Future<void> main() async {
   }
 
   // Carga de preferencias persistidas (idioma, tema y escala de texto).
-  final savedLang = await LanguagePrefs.load();
+  final savedLang = await savedLangFuture;
   await PushNotifications.instance.init(savedLang);
-  final (savedMode, savedScale) = await ThemePrefs.load();
+  final (savedMode, savedScale) = await savedThemeFuture;
   final observers = <ProviderObserver>[
     if (kEnableRiverpodLogs) LogObserver(),
     PushLanguageObserver(PushNotifications.instance),
@@ -108,7 +109,7 @@ class App extends ConsumerWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const SplashView(), // Vista raíz con navegación inferior por tabs.
+      home: const NavScaffold(), // Vista raíz con navegación inferior por tabs.
       routes: {'/home': (_) => const NavScaffold()},
     );
   }
@@ -148,7 +149,6 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
   @override
   Widget build(BuildContext context) {
     final idx = ref.watch(bottomTabIndexProvider);
-    final t = ref.watch(stringsProvider);
 
     return Scaffold(
       body: IndexedStack(index: idx, children: pages),
@@ -160,22 +160,22 @@ class _NavScaffoldState extends ConsumerState<NavScaffold> {
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
             selectedIcon: const Icon(Icons.home),
-            label: t.navHome,
+            label: ref.watch(stringsProvider).navHome,
           ),
           NavigationDestination(
             icon: const Icon(Icons.folder_copy_outlined),
             selectedIcon: const Icon(Icons.folder),
-            label: t.navArchive,
+            label: ref.watch(stringsProvider).navArchive,
           ),
           NavigationDestination(
             icon: const Icon(Icons.favorite_border),
             selectedIcon: const Icon(Icons.favorite),
-            label: t.navFavorites,
+            label: ref.watch(stringsProvider).navFavorites,
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),
             selectedIcon: const Icon(Icons.person),
-            label: t.navProfile,
+            label: ref.watch(stringsProvider).navProfile,
           ),
         ],
       ),

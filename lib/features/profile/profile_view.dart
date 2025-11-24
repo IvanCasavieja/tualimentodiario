@@ -62,9 +62,6 @@ class _GuestProfile extends ConsumerWidget {
 
           const _PreferencesCard(),
 
-          const SizedBox(height: 16),
-          const _FeedbackCard(),
-
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: () async {

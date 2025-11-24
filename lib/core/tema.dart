@@ -3,32 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// ===== Persistencia =====
-const _kThemeModeKey = 'pref_theme_mode'; // 'light' | 'dark' | 'system'
+const _kThemeModeKey = 'pref_theme_mode'; // 'light' | 'dark' (null => follow system)
 const _kTextScaleKey = 'pref_text_scale'; // double (0.9 .. 1.4)
 
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 final textScaleProvider = StateProvider<double>((ref) => 1.0);
 
 class ThemePrefs {
   static Future<(ThemeMode, double)> load() async {
     final sp = await SharedPreferences.getInstance();
-    final modeStr = sp.getString(_kThemeModeKey) ?? 'light';
+    final modeStr = sp.getString(_kThemeModeKey);
     final scale = (sp.getDouble(_kTextScaleKey) ?? 1.0).clamp(0.9, 1.4);
     final mode = switch (modeStr) {
       'dark' => ThemeMode.dark,
-      'system' => ThemeMode.system,
-      _ => ThemeMode.light,
+      'light' => ThemeMode.light,
+      _ => ThemeMode.system, // no pref saved -> sigue al sistema
     };
     return (mode, scale);
   }
 
   static Future<ThemeMode> loadMode() async {
     final sp = await SharedPreferences.getInstance();
-    final modeStr = sp.getString(_kThemeModeKey) ?? 'light';
+    final modeStr = sp.getString(_kThemeModeKey);
     return switch (modeStr) {
       'dark' => ThemeMode.dark,
-      'system' => ThemeMode.system,
-      _ => ThemeMode.light,
+      'light' => ThemeMode.light,
+      _ => ThemeMode.system,
     };
   }
 
@@ -41,8 +41,7 @@ class ThemePrefs {
     final sp = await SharedPreferences.getInstance();
     final value = switch (mode) {
       ThemeMode.dark => 'dark',
-      ThemeMode.system => 'system',
-      _ => 'light',
+      _ => 'light', // la UI solo expone claro/oscuro
     };
     await sp.setString(_kThemeModeKey, value);
   }

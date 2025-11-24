@@ -17,20 +17,40 @@ class FavoritesView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(stringsProvider);
 
+    final isGuest = ref.watch(guestModeProvider);
     final user = ref.watch(authStateProvider).value;
     final langCode = ref.watch(languageProvider).name;
 
-    if (user == null) {
+    if (isGuest) {
       return Scaffold(
         appBar: AppBar(
           title: Text(t.favoritesTitle),
           actions: const [WatchAdButton()],
         ),
-        body: Center(child: Text(t.favoritesNeedLogin)),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                t.favoritesNeedLogin,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () => ref
+                    .read(bottomTabIndexProvider.notifier)
+                    .state = 3,
+                icon: const Icon(Icons.login),
+                label: Text(t.profileTitle),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
-    final favIds = ref.watch(favoritesIdsProvider(user.uid));
+    final favIds = ref.watch(favoritesIdsProvider(user!.uid));
 
     return Scaffold(
       appBar: AppBar(

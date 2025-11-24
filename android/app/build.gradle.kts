@@ -14,7 +14,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.tu_alimento_diario"
+    namespace = "com.tualimentodiario.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.tu_alimento_diario"
+        applicationId = "com.tualimentodiario.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -82,4 +82,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart'; // authStateProvider, isFavoriteProvider
 import '../../core/firestore_repository.dart'; // FS
-import '../../core/i18n.dart';
+import '../../core/app_state.dart'; // bottomTabIndexProvider
 
 class FavoriteHeart extends ConsumerWidget {
   const FavoriteHeart({super.key, required this.foodId, this.iconSize = 24});
@@ -13,24 +13,30 @@ class FavoriteHeart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final t = ref.watch(stringsProvider);
-    final user = ref.watch(authStateProvider).value;
-    if (user == null) {
+    final authAsync = ref.watch(authStateProvider);
+    final user = authAsync.value;
+    final isGuest = isGuestUser(user);
+    if (isGuest) {
       return IconButton(
         iconSize: iconSize,
         tooltip: 'Agregar a favoritos',
         icon: const Icon(Icons.favorite_border),
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(t.favoritesNeedLogin)),
-          );
+          ref.read(bottomTabIndexProvider.notifier).state = 2;
         },
       );
     }
 
-    final isFavAsync = ref.watch(
-      isFavoriteProvider((uid: user.uid, foodId: foodId)),
-    );
+    if (user == null) {
+      return IconButton(
+        iconSize: iconSize,
+        icon: const Icon(Icons.favorite_border),
+        onPressed: null,
+      );
+    }
+
+    final isFavAsync =
+        ref.watch(isFavoriteProvider((uid: user.uid, foodId: foodId)));
 
     return isFavAsync.when(
       loading: () => SizedBox(

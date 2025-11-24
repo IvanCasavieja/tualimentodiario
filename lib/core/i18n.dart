@@ -37,6 +37,7 @@ class Strings {
   final String resetEmailFederated;
   final String feedbackTitle;
   final String feedbackSubtitle;
+  final String feedbackNeedLogin;
   final String feedbackHint;
   final String feedbackSubmit;
   final String feedbackSuccess;
@@ -97,6 +98,7 @@ class Strings {
     required this.resetEmailFederated,
     required this.feedbackTitle,
     required this.feedbackSubtitle,
+    required this.feedbackNeedLogin,
     required this.feedbackHint,
     required this.feedbackSubmit,
     required this.feedbackSuccess,
@@ -141,7 +143,8 @@ const _es = Strings(
   filterBtn: 'Filtrar',
   noResults: 'No hay resultados',
   favoritesTitle: 'Favoritos',
-  favoritesNeedLogin: 'Iniciá sesión para ver tus favoritos',
+  favoritesNeedLogin:
+      'No has iniciado sesión. Debes iniciar sesión o crear una cuenta nueva para utilizar los favoritos.',
   favoritesEmpty: 'No tenés favoritos aún',
   profileTitle: 'Perfil',
   guest: 'Invitado',
@@ -159,6 +162,8 @@ const _es = Strings(
       'Esta cuenta se creó con Google u otro proveedor. Inicia sesión con ese método.',
   feedbackTitle: 'Envíanos tu opinión',
   feedbackSubtitle: 'Queremos saber qué mejorar o qué te gusta.',
+  feedbackNeedLogin:
+      'No has iniciado sesión. Debes iniciar sesión o crear una cuenta nueva para enviar tu opinión.',
   feedbackHint: 'Escribe aquí tu mensaje',
   feedbackSubmit: 'Enviar opinión',
   feedbackSuccess: '¡Gracias! Tu opinión fue enviada.',
@@ -222,6 +227,8 @@ const _en = Strings(
       'This account uses Google/another provider. Please continue with that method.',
   feedbackTitle: 'Send us your feedback',
   feedbackSubtitle: 'Tell us what you love or what we can improve.',
+  feedbackNeedLogin:
+      'You are not signed in. Please sign in or create an account to send feedback.',
   feedbackHint: 'Write your message here',
   feedbackSubmit: 'Send feedback',
   feedbackSuccess: 'Thanks! Your feedback was sent.',
@@ -285,6 +292,8 @@ const _pt = Strings(
       'Esta conta usa Google/outro provedor. Entre por esse método.',
   feedbackTitle: 'Envie sua opinião',
   feedbackSubtitle: 'Conte-nos o que você ama ou o que podemos melhorar.',
+  feedbackNeedLogin:
+      'Você não fez login. Entre ou crie uma conta para enviar sua opinião.',
   feedbackHint: 'Escreva sua mensagem aqui',
   feedbackSubmit: 'Enviar opinião',
   feedbackSuccess: 'Obrigado! Sua opinião foi enviada.',
@@ -348,6 +357,8 @@ const _it = Strings(
       'Questo account usa Google o un altro provider. Accedi con quel metodo.',
   feedbackTitle: 'Inviaci la tua opinione',
   feedbackSubtitle: 'Dicci cosa ami o cosa possiamo migliorare.',
+  feedbackNeedLogin:
+      'Non hai effettuato l’accesso. Accedi o crea un account per inviare la tua opinione.',
   feedbackHint: 'Scrivi qui il tuo messaggio',
   feedbackSubmit: 'Invia opinione',
   feedbackSuccess: 'Grazie! La tua opinione è stata inviata.',

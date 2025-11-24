@@ -25,6 +25,14 @@ final authStateProvider = StreamProvider<User?>(
   (ref) => FirebaseAuth.instance.authStateChanges(),
 );
 
+bool isGuestUser(User? user) => user == null || user.isAnonymous;
+bool isLoggedIn(User? user) => user != null && !user.isAnonymous;
+
+final guestModeProvider = Provider<bool>(name: 'guestModeProvider', (ref) {
+  final auth = ref.watch(authStateProvider);
+  return isGuestUser(auth.value);
+});
+
 // Alias opcional
 @Deprecated('Usá authStateProvider')
 final authProvider = authStateProvider;
